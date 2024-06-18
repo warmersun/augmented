@@ -12,10 +12,10 @@ async def start():
     ) 
     assistant =  client.beta.assistants.create(
       name="Content Worker",
-      instructions="you are a content creator assistant. You work together with the user to create lesson content for the learning goals specified in the input. Input: learning goals. Output: content for a lesson plan.",
+      instructions="You are a content creator assistant. You work together with the user to create lesson content for the learning goals specified in the input. Input: learning goals. Output: content for a lesson plan.",
       model="gpt-4o",
     )
-    cl.user_session.set("worker", Worker(assistant))
+    cl.user_session.set("worker", Worker(assistant, "Learning goal: Russian civil war"))
 
 @cl.on_message
 async def main(message: cl.Message):

@@ -1,12 +1,11 @@
-
 from openai import OpenAI
 from openai.types.beta import Assistant
 from openai.types.beta.threads import Message
 
-
 class Worker:
-  def __init__(self, assistant: Assistant) -> None:
+  def __init__(self, assistant: Assistant, input: str) -> None:
     self.assistant = assistant
+    self.additional_instructions = f"The input is: {input}"
 
     self.client = OpenAI(
       api_key="sk-proj-lIS7EjUSNLIxMzZXKukNT3BlbkFJpxzt48gerFrWOUxAHQGp",
@@ -27,7 +26,8 @@ class Worker:
 
     self.run = self.client.beta.threads.runs.create_and_poll(
       thread_id=self.thread.id,
-      assistant_id=self.assistant.id
+      assistant_id=self.assistant.id,
+      additional_instructions=self.additional_instructions
     )
 
     if self.run.status == 'completed':
