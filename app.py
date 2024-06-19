@@ -56,7 +56,7 @@ async def start():
         "Output: content for a each learning goal that the facilitator can later use to build out their lesson plan.",
       model="gpt-4o",
     )
-    worker =  Worker(assistant, "Learning goal: Great October Revolution in 1917. The student should know about Lenin, the tsar and why peoplpe revolted, just the basics.")
+    worker =  Worker(assistant, "Learning goal: Great October Revolution in 1917. The student should know about Lenin just the basics.")
     cl.user_session.set("worker",worker)
     # the AI starts
     await worker.get_next_assistant_message(EventHandler())

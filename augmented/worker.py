@@ -59,7 +59,10 @@ class Worker:
           # Access the text content of each message
           if message.content[0].type == 'text':
             output_text = message.content[0].text.value
-            self.output = json.loads(output_text).get("output", "Failed to generate output")
+            try:
+                self.output = json.loads(output_text).get("output", "Failed to generate output")
+            except json.JSONDecodeError:
+                self.output = output_text
             return self.output
           else:
             # TODO: fix
