@@ -39,40 +39,47 @@ class Worker:
   def is_finished(self) -> bool:
     return self.finished
 
+  import json
+
   def generate_output(self) -> str:
-    output_run =  self.client.beta.threads.runs.create_and_poll(
-      thread_id=self.thread.id,
-      assistant_id=self.assistant.id,
-      # TODO: support multiple outputs
-      additional_instructions=
-        "Produce the output in JSON format, as a JSON structure with a single string called `output`. Like this:\n{\n    \"output\": \"..example output...\"\n}\n\n" + self.additional_instructions,
-      response_format={"type": "json_object"}
-    )
-    if output_run.status == 'completed':
-      messages = self.client.beta.threads.messages.list(
-        thread_id=self.thread.id,
-        run_id = output_run.id
+      output_run = self.client.beta.threads.runs.create_and_poll(
+          thread_id=self.thread.id,
+          assistant_id=self.assistant.id,
+          # TODO: support multiple outputs
+          additional_instructions=(
+              "Produce the output in JSON format, as a JSON structure with a single string called `output`. "
+              "Like this:\n{\n    \"output\": \"..example output...\"\n}\n\n" + self.additional_instructions
+          ),
+          response_format={"type": "json_object"}
       )
-      # Check if there are messages in the response
-      if messages.data:
-        for message in messages:
-          # Access the text content of each message
-          if message.content[0].type == 'text':
-            output_text = message.content[0].text.value
-            try:
-                self.output = json.loads(output_text).get("output", "Failed to generate output")
-            except json.JSONDecodeError:
-                self.output = output_text
-            return self.output
+      if output_run.status == 'completed':
+          messages = self.client.beta.threads.messages.list(
+              thread_id=self.thread.id,
+              run_id=output_run.id
+          )
+          # Check if there are messages in the response
+          if messages.data:
+              for message in messages:
+                  # Access the text content of each message
+                  if message.content[0].type == 'text':
+                      output_text = message.content[0].text.value
+                      try:
+                          output_json = json.loads(output_text)
+                          self.output = output_json.get("output", "Failed to generate output")
+                      except json.JSONDecodeError:
+                          self.output = "Failed to decode JSON"
+                      except Exception as e:
+                          self.output = f"Unexpected error: {str(e)}"
+                      return str(self.output)
+                  else:
+                      # Handle case where message content is not text
+                      return "Message content is not text."
           else:
-            # TODO: fix
-            return "n/a"
-      else:
-        # TODO: fix
-        return "No messages found."
-      
-    # TODO: fix    
-    return output_run.status
+              # Handle case where no messages are found
+              return "No messages found."
+
+      # Handle case where output run status is not completed
+      return f"Output run status: {output_run.status}"
   
   async def get_next_assistant_message(self, event_handler: AsyncAssistantEventHandler) -> None:
     async with self.async_client.beta.threads.runs.stream(
