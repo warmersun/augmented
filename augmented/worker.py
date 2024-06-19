@@ -32,6 +32,9 @@ class Worker:
 
   def check_if_we_finished(self, msg: str) -> None:
     self.finished = msg.upper().endswith("FINISHED")
+
+  def finish(self) -> None:
+    self.finished = True
   
   def is_finished(self) -> bool:
     return self.finished
@@ -56,7 +59,7 @@ class Worker:
           # Access the text content of each message
           if message.content[0].type == 'text':
             output_text = message.content[0].text.value
-            self.output = json.loads(output_text).get("output")
+            self.output = json.loads(output_text).get("output", "Failed to generate output")
             return self.output
           else:
             # TODO: fix
@@ -80,13 +83,13 @@ class Worker:
   def output_is_good_to_go(self) -> None:
     self.output_confirmed = True
 
-  def output_needs_work(self) -> None:
+  def output_needs_work(self, feedback: str) -> None:
     self.output_confirmed = False
     self.finished = False
     # need to send the AI a message that the output needs work
     self.submit_user_message(
       f"The output needs work." \
-      f"This is the output that was generated but not good to go:\n***\n{self.output}"
+      f"This is the output that was generated but not good to go:\n***\n{self.output}\n***\nThis is my feedback: {feedback}"
     )
   
 

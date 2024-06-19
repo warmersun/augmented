@@ -15,7 +15,18 @@ class EventHandler(AsyncAssistantEventHandler):
         
     @override
     async def on_text_created(self, text: Text) -> None:
+        # remove the Finish button from the previous message
+        previous_finish_actions = cl.user_session.get("finish_actions")
+        if previous_finish_actions:
+            for previous_finish_action in previous_finish_actions:
+                await previous_finish_action.remove()
+
         self.current_message = await cl.Message(content="").send()
+        # remember the new Finish button
+        finish_actions =  [
+            cl.Action(name="finish", value="finish", label="Finished", description="Indicate that the work is finished and the AI should now generate the output")
+        ]
+        cl.user_session.set("finish_actions", finish_actions)
 
     @override
     async def on_text_delta(self, delta: TextDelta, snapshot: Text) -> None:
@@ -23,6 +34,11 @@ class EventHandler(AsyncAssistantEventHandler):
 
     @override
     async def on_text_done(self, text: Text) -> None:
+        # display a Finish button
+        finish_actions = cl.user_session.get("finish_actions")
+        if finish_actions:
+            self.current_message.actions = finish_actions
+            
         await self.current_message.update()
         
 @cl.on_chat_start
@@ -34,11 +50,10 @@ async def start():
       name="Content Worker",
       instructions=
         "You are a content creator assistant." \
-        "You work together with the user - the facilitator - to create lesson content for the learning goals specified in the input. " \
+        "You work together with the user - the facilitator - to create lesson content for the learning goals specified in the input. This is not an entire lesson plan just content to be used in one: stories, fun facts, elements to be used by a facilitator." \
         "Make sure the content is fun, interesting for students who are high school juniors."
         "Input: learning goals. " \
-        "Output: content for a each learning goal that the facilitator can later use to build out their lesson plan. " \
-        "When you think you're done and have everything to create the output remind the user to say 'FINISHED'.",
+        "Output: content for a each learning goal that the facilitator can later use to build out their lesson plan.",
       model="gpt-4o",
     )
     worker =  Worker(assistant, "Learning goal: Great October Revolution in 1917. The student should know about Lenin, the tsar and why peoplpe revolted, just the basics.")
@@ -64,43 +79,48 @@ async def main(message: cl.Message):
         worker.submit_user_message(message.content)
         #  check if this message means that the user has finished and the job is completed
         if worker.is_finished():
-            # we ask the worker to generate the output and show it to the user to confirm
-
-            msg = cl.Message(content="")
-            await msg.send()
-            
-            output = worker.generate_output()
-            actions = [
-                # confirm
-                cl.Action(
-                    name='confirm_output', 
-                    value="confirm", 
-                    label="Confirm", 
-                    description="Confirm the output is good to go."
-                ),
-                # cancel
-                cl.Action(
-                    name='confirm_output', 
-                    value="cancel", 
-                    label="Cancel", 
-                    description="Need to keep working on the output."
-                )
-            ]
-            cl.user_session.set("actions", actions)
-            elements = [
-                cl.Text(name="output", content=output, display="inline")
-            ]
-
-            
-            msg.content ="Confirm the output is good to go!"
-            msg.actions=actions
-            msg.elements=elements
-            await msg.update()
+            await get_output()
         else:
-            await cl.Message(
-                content=await worker.get_next_assistant_message(EventHandler())                
-            ).send()
+            await worker.get_next_assistant_message(EventHandler())    
 
+async def get_output():
+    # get the worker from the user session
+    worker = cl.user_session.get("worker")
+    if worker is not None:
+        
+        # we ask the worker to generate the output and show it to the user to confirm
+    
+        msg = cl.Message(content="")
+        await msg.send()
+    
+        output = worker.generate_output()
+        actions = [
+            # confirm
+            cl.Action(
+                name='confirm_output', 
+                value="confirm", 
+                label="Confirm", 
+                description="Confirm the output is good to go."
+            ),
+            # cancel
+            cl.Action(
+                name='confirm_output', 
+                value="needs_more_work", 
+                label="Needs more work...", 
+                description="Need to keep working on the output."
+            )
+        ]
+        cl.user_session.set("actions", actions)
+        elements = [
+            cl.Text(name="output", content=output, display="inline")
+        ]
+    
+        msg.content ="Confirm the output is good to go!"
+        msg.actions=actions
+        msg.elements=elements
+        await msg.update()
+        
+    
 @cl.action_callback("confirm_output")
 async def confirm_output(action: cl.Action):
     # after the user or the AI has decided that the job is complete the AI generated the output and presented it for the user.
@@ -114,11 +134,12 @@ async def confirm_output(action: cl.Action):
         if action.value == "confirm":              
             worker.output_is_good_to_go()
         else:        
-            worker.output_needs_work()
+            feedback = await cl.AskUserMessage(content="Please provide your feedback on the generated output!", timeout=30).send()
+            feedback_str = feedback.get('output', 'Needs more work!') if feedback else 'Needs more work.'
+            worker.output_needs_work(feedback_str)
             # we ask the worker to continue and return the next AI message to show
-            await cl.Message(
-                content = await worker.get_next_assistant_message()
-            ).send()
+            await worker.get_next_assistant_message(EventHandler())
+            
         # remove the action buttons from the UI
         actions = cl.user_session.get("actions")
         if actions is not None:
@@ -126,6 +147,16 @@ async def confirm_output(action: cl.Action):
                 await action.remove()
 
     return "Confirmed!"
+
+@cl.action_callback("finish")
+async def finish(action: cl.Action):
+    worker = cl.user_session.get("worker")
+    if worker is not None and action.value == "finish":
+        worker.finish()
+        await get_output()
+
+    await action.remove()
+    return "Finished! Generating output..."
 
 if __name__ == "__main__":
   from chainlit.cli import run_chainlit
