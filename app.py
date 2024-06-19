@@ -1,20 +1,28 @@
 from typing_extensions import override
 import chainlit as cl
-from openai import OpenAI, AssistantEventHandler
+from openai import OpenAI, AsyncAssistantEventHandler
 from openai.types.beta import Assistant
 from openai.types.beta.threads import Text, TextDelta
 
 from augmented import Worker
 
-class EventHandler(AssistantEventHandler):
+class EventHandler(AsyncAssistantEventHandler):
+    def __init__(self) -> None:
+        super().__init__()
+        self.current_message: cl.Message = None
+        
     @override
-    def on_text_created(self, text: Text) -> None:
-        pass
+    async def on_text_created(self, text: Text) -> None:
+        self.current_message = await cl.Message(content="").send()
 
     @override
-    def on_text_delta(self, delta: TextDelta, snapshot: Text) -> None:
-        pass
+    async def on_text_delta(self, delta: TextDelta, snapshot: Text) -> None:
+         await self.current_message.stream_token(delta.value or "")
 
+    @override
+    async def on_text_done(self, text: Text) -> None:
+        await self.current_message.update()
+        
 @cl.on_chat_start
 async def start():
     client = OpenAI(
@@ -31,10 +39,10 @@ async def start():
         "When you think you're done and have everything to create the output remind the user to say 'FINISHED'.",
       model="gpt-4o",
     )
-    worker =  Worker(assistant, EventHandler(), "Learning goal: Great October Revolution in 1917. The student should know about Lenin, the tsar and why peoplpe revolted, just the basics.")
+    worker =  Worker(assistant, "Learning goal: Great October Revolution in 1917. The student should know about Lenin, the tsar and why peoplpe revolted, just the basics.")
     cl.user_session.set("worker",worker)
     # the AI starts
-    await cl.Message(content=worker.get_next_assistant_message()).send()
+    await worker.get_next_assistant_message(EventHandler())
 
 @cl.on_message
 async def main(message: cl.Message):
@@ -83,7 +91,7 @@ async def main(message: cl.Message):
             ).send()
         else:
             await cl.Message(
-                content=worker.get_next_assistant_message()                
+                content=await worker.get_next_assistant_message(EventHandler())                
             ).send()
 
 @cl.action_callback("confirm_output")
@@ -102,7 +110,7 @@ async def confirm_output(action: cl.Action):
             worker.output_needs_work()
             # we ask the worker to continue and return the next AI message to show
             await cl.Message(
-                content=worker.get_next_assistant_message()
+                content = await worker.get_next_assistant_message()
             ).send()
         # remove the action buttons from the UI
         actions = cl.user_session.get("actions")

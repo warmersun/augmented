@@ -1,19 +1,22 @@
 import json
+import os
 
-from openai import OpenAI, AssistantEventHandler
+from openai import AsyncAssistantEventHandler, AsyncOpenAI, OpenAI
 from openai.types.beta import Assistant
 from openai.types.beta.threads import Message
 
 
 class Worker:
-  def __init__(self, assistant: Assistant, event_handler: AssistantEventHandler, input: str) -> None:
+  def __init__(self, assistant: Assistant, input: str) -> None:
     self.assistant = assistant
-    self.event_handler = event_handler
     self.additional_instructions = f"The input is: {input}"
 
     self.client = OpenAI(
-      api_key="sk-proj-lIS7EjUSNLIxMzZXKukNT3BlbkFJpxzt48gerFrWOUxAHQGp",
+      api_key=os.environ['OPENAI_API_KEY'],
     ) 
+    self.async_client = AsyncOpenAI(
+      api_key=os.environ['OPENAI_API_KEY'],
+    )
     self.thread = self.client.beta.threads.create()
     self.run = None
     self.finished = False
@@ -67,33 +70,18 @@ class Worker:
     # TODO: fix    
     return output_run.status
   
-  def get_next_assistant_message(self) -> str:
-    self.run = self.client.beta.threads.runs.create_and_poll(
+  async def get_next_assistant_message(self, event_handler: AsyncAssistantEventHandler) -> str:
+    async with self.async_client.beta.threads.runs.stream(
       thread_id=self.thread.id,
       assistant_id=self.assistant.id,
-      additional_instructions=self.additional_instructions
-    )
-    if self.run.status == 'completed':
-      messages = self.client.beta.threads.messages.list(
-        thread_id=self.thread.id,
-        run_id = self.run.id
-      )
-      # Check if there are messages in the response
-      if messages.data:
-        for message in messages:
-          # Access the text content of each message
-          if message.content[0].type == 'text':
-            message_text = message.content[0].text.value
-          else:
-            message_text = "n/a"
-          self.check_if_we_finished(message_text)
-          return message_text
-      else:
-        # TODO: fix
-        return "No messages found."
-    # TODO: fix    
-    return self.run.status
-  
+      additional_instructions=self.additional_instructions,
+      event_handler=event_handler
+    ) as stream:
+      await stream.until_done()
+
+    # self.check_if_we_finished(message_text)
+    return ""
+
   def output_is_good_to_go(self) -> None:
     self.output_confirmed = True
 
