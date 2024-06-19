@@ -42,6 +42,7 @@ class Worker:
   import json
 
   def generate_output(self) -> str:
+      self.submit_user_message("Generate the output. Remember, the output is a JSON object with the just a single key: 'output' and the value is a string.")
       output_run = self.client.beta.threads.runs.create_and_poll(
           thread_id=self.thread.id,
           assistant_id=self.assistant.id,
