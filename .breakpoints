@@ -2,16 +2,10 @@
   "files": {
     "augmented/worker.py": [
       {
-        "id": "0c86790f-6e1e-4fe8-aa44-f349e9ca0289",
-        "line": 38,
-        "version": 2124,
-        "index": 1085
-      },
-      {
-        "id": "c9cc95a1-ca9e-4633-9052-3e8e088b5944",
-        "line": 78,
-        "version": 2282,
-        "index": 2518
+        "id": "d6978f6e-d454-492b-9758-5b585abe1c31",
+        "line": 56,
+        "version": 2422,
+        "index": 1720
       }
     ]
   }

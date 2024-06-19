@@ -43,8 +43,7 @@ class Worker:
       assistant_id=self.assistant.id,
       # TODO: support multiple outputs
       additional_instructions=
-        "Produce the output in JSON format, as a JSON structure with a single string"
-        "called `output`.\n" + self.additional_instructions,
+        "Produce the output in JSON format, as a JSON structure with a single string called `output`. Like this:\n{\n    \"output\": \"..example output...\"\n}\n\n" + self.additional_instructions,
       response_format={"type": "json_object"}
     )
     if output_run.status == 'completed':

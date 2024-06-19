@@ -63,6 +63,11 @@ async def main(message: cl.Message):
         #  check if this message means that the user has finished and the job is completed
         if worker.is_finished():
             # we ask the worker to generate the output and show it to the user to confirm
+            
+            #inform the user
+            info = cl.Message(content="Generating output...")
+            await info.send()
+            
             output = worker.generate_output()
             actions = [
                 # confirm
@@ -84,6 +89,9 @@ async def main(message: cl.Message):
             elements = [
                 cl.Text(name="output", content=output, display="inline")
             ]
+            #remove the info message
+            await info.remove()
+            
             await cl.Message(
                 content="Confirm the output is good to go!", 
                 actions=actions,
