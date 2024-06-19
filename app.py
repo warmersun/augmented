@@ -1,10 +1,12 @@
-from typing_extensions import override
+import os
+
 import chainlit as cl
-from openai import OpenAI, AsyncAssistantEventHandler
-from openai.types.beta import Assistant
+from openai import AsyncAssistantEventHandler, OpenAI
 from openai.types.beta.threads import Text, TextDelta
+from typing_extensions import override
 
 from augmented import Worker
+
 
 class EventHandler(AsyncAssistantEventHandler):
     def __init__(self) -> None:
@@ -26,7 +28,7 @@ class EventHandler(AsyncAssistantEventHandler):
 @cl.on_chat_start
 async def start():
     client = OpenAI(
-      api_key="sk-proj-lIS7EjUSNLIxMzZXKukNT3BlbkFJpxzt48gerFrWOUxAHQGp",
+         api_key=os.environ['OPENAI_API_KEY'],
     ) 
     assistant =  client.beta.assistants.create(
       name="Content Worker",
@@ -63,10 +65,9 @@ async def main(message: cl.Message):
         #  check if this message means that the user has finished and the job is completed
         if worker.is_finished():
             # we ask the worker to generate the output and show it to the user to confirm
-            
-            #inform the user
-            info = cl.Message(content="Generating output...")
-            await info.send()
+
+            msg = cl.Message(content="")
+            await msg.send()
             
             output = worker.generate_output()
             actions = [
@@ -89,14 +90,12 @@ async def main(message: cl.Message):
             elements = [
                 cl.Text(name="output", content=output, display="inline")
             ]
-            #remove the info message
-            await info.remove()
+
             
-            await cl.Message(
-                content="Confirm the output is good to go!", 
-                actions=actions,
-                elements=elements
-            ).send()
+            msg.content ="Confirm the output is good to go!"
+            msg.actions=actions
+            msg.elements=elements
+            await msg.update()
         else:
             await cl.Message(
                 content=await worker.get_next_assistant_message(EventHandler())                

@@ -3,7 +3,6 @@ import os
 
 from openai import AsyncAssistantEventHandler, AsyncOpenAI, OpenAI
 from openai.types.beta import Assistant
-from openai.types.beta.threads import Message
 
 
 class Worker:
@@ -69,7 +68,7 @@ class Worker:
     # TODO: fix    
     return output_run.status
   
-  async def get_next_assistant_message(self, event_handler: AsyncAssistantEventHandler) -> str:
+  async def get_next_assistant_message(self, event_handler: AsyncAssistantEventHandler) -> None:
     async with self.async_client.beta.threads.runs.stream(
       thread_id=self.thread.id,
       assistant_id=self.assistant.id,
@@ -77,9 +76,6 @@ class Worker:
       event_handler=event_handler
     ) as stream:
       await stream.until_done()
-
-    # self.check_if_we_finished(message_text)
-    return ""
 
   def output_is_good_to_go(self) -> None:
     self.output_confirmed = True
