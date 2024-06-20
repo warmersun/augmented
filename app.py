@@ -6,6 +6,7 @@ from openai.types.beta.threads import Text, TextDelta
 from typing_extensions import override
 
 from augmented import Worker
+from augmented.observer import Observer
 
 
 class EventHandler(AsyncAssistantEventHandler):
@@ -49,10 +50,10 @@ async def start():
     assistant =  client.beta.assistants.create(
       name="Content Worker",
       instructions=
-        "You are a content creator assistant." \
-        "You work together with the user - the facilitator - to create lesson content for the learning goals specified in the input. This is not an entire lesson plan just content to be used in one: stories, fun facts, elements to be used by a facilitator." \
+        "You are a content creator assistant."
+        "You work together with the user - the facilitator - to create lesson content for the learning goals specified in the input. This is not an entire lesson plan just content to be used in one: stories, fun facts, elements to be used by a facilitator."
         "Make sure the content is fun, interesting for students who are high school juniors."
-        "Input: learning goals. " \
+        "Input: learning goals. "
         "Output: content for a each learning goal that the facilitator can later use to build out their lesson plan.",
       model="gpt-4o",
     )
@@ -136,6 +137,26 @@ async def confirm_output(action: cl.Action):
         # let the worker know 
         if action.value == "confirm":              
             worker.output_is_good_to_go()
+
+            # ***
+            # Let's try an observer!
+            # observe the output
+            client = OpenAI(
+                 api_key=os.environ['OPENAI_API_KEY'],
+            ) 
+            observer_assistant = client.beta.assistants.create(
+              name = "Content Observer",
+              instructions = 
+                "You are an observer. You look at conversations between an AI content creator assistant and a facilitator and evaluate it with constructive criticism."
+                " Is this content something that a bored-out-of-their-maind high school junir would be interested in?"
+                " Your job is not to help the user or answer their questions but to observe and analyze the entire conversation. "
+                " Provide your analysis! Output as JSON structure containing an `observation` string",
+              model="gpt-4o",
+            )
+            observer = Observer(observer_assistant, worker.input, worker.output, worker.thread)
+            observation = observer.observe()
+            await cl.Message(content=f"Observation: {observation}").send()
+            # ***
         else:        
             feedback = await cl.AskUserMessage(content="Please provide your feedback on the generated output!", timeout=30).send()
             feedback_str = feedback.get('output', 'Needs more work!') if feedback else 'Needs more work.'

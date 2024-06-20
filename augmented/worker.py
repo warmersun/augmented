@@ -8,8 +8,7 @@ from openai.types.beta import Assistant
 class Worker:
   def __init__(self, assistant: Assistant, input: str) -> None:
     self.assistant = assistant
-    self.additional_instructions = f"The input is: {input}"
-
+    self.input = input
     self.client = OpenAI(
       api_key=os.environ['OPENAI_API_KEY'],
     ) 
@@ -47,7 +46,7 @@ class Worker:
           assistant_id=self.assistant.id,
           # TODO: support multiple outputs
           instructions= (self.assistant.instructions or "") + "Generate the output. Remember, the output is a JSON object with the just a single key: 'output' and the value is a string.",
-          additional_instructions=self.additional_instructions,
+          additional_instructions=f"The input is: {self.input}",
           response_format={"type": "json_object"}
       )
       if output_run.status == 'completed':
@@ -83,7 +82,7 @@ class Worker:
     async with self.async_client.beta.threads.runs.stream(
       thread_id=self.thread.id,
       assistant_id=self.assistant.id,
-      additional_instructions=self.additional_instructions,
+      additional_instructions=f"The input is: {self.input}",
       event_handler=event_handler
     ) as stream:
       await stream.until_done()
