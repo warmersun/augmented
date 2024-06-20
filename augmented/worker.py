@@ -42,15 +42,12 @@ class Worker:
   import json
 
   def generate_output(self) -> str:
-      self.submit_user_message("Generate the output. Remember, the output is a JSON object with the just a single key: 'output' and the value is a string.")
       output_run = self.client.beta.threads.runs.create_and_poll(
           thread_id=self.thread.id,
           assistant_id=self.assistant.id,
           # TODO: support multiple outputs
-          additional_instructions=(
-              "Produce the output in JSON format, as a JSON structure with a single string called `output`. "
-              "Like this:\n{\n    \"output\": \"..example output...\"\n}\n\n" + self.additional_instructions
-          ),
+          instructions= (self.assistant.instructions or "") + "Generate the output. Remember, the output is a JSON object with the just a single key: 'output' and the value is a string.",
+          additional_instructions=self.additional_instructions,
           response_format={"type": "json_object"}
       )
       if output_run.status == 'completed':
