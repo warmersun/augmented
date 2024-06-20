@@ -6,15 +6,19 @@ from openai.types.beta import Assistant
 
 
 class Worker:
-  def __init__(self, assistant: Assistant, input: str) -> None:
-    self.assistant = assistant
-    self.input = input
+  def __init__(self, name: str, instructions: str, input: str) -> None:
     self.client = OpenAI(
       api_key=os.environ['OPENAI_API_KEY'],
     ) 
     self.async_client = AsyncOpenAI(
       api_key=os.environ['OPENAI_API_KEY'],
     )
+    self.assistant = self.client.beta.assistants.create(
+      name=name,
+      instructions=instructions,
+      model="gpt-4o",
+    )
+    self.input = input
     self.thread = self.client.beta.threads.create()
     self.run = None
     self.finished = False

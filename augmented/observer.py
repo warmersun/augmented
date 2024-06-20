@@ -4,6 +4,8 @@ import os
 from openai import AsyncAssistantEventHandler, AsyncOpenAI, OpenAI
 from openai.types.beta import Assistant, Thread
 
+from augmented.worker import Worker
+
 # The Observer looks at a previous output and provides an observation such as a summary, an evaluation, a criticism
 # It should be passed an assistant that has its instructions include
 # 1. JSON mode
@@ -16,18 +18,22 @@ from openai.types.beta import Assistant, Thread
 # It will receive the input, the produced output and the entire conversation thread
 
 class Observer:
-  def __init__(self, assistant: Assistant, input: str, output: str, thread: Thread) -> None:
-    self.assistant = assistant
-    self.input = input
-    self.output = output
-    self.thread = thread
-    self.observation = ""
+  def __init__(self, name: str, instructions:str, worker: Worker) -> None:
     self.client = OpenAI(
       api_key=os.environ['OPENAI_API_KEY'],
     ) 
     self.async_client = AsyncOpenAI(
       api_key=os.environ['OPENAI_API_KEY'],
     )
+    self.assistant = self.client.beta.assistants.create(
+      name=name,
+      instructions=instructions,
+      model="gpt-4o",
+    )
+    self.input = worker.input
+    self.output = worker.output
+    self.thread = worker.thread
+    self.observation = ""
 
   def observe(self) -> str:
     run = self.client.beta.threads.runs.create_and_poll(

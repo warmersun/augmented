@@ -1,0 +1,22 @@
+workers:
+  - input: "input1"
+    output: "output1"
+    assistant:
+      name: "Assistant1"
+      instruction: "Instruction for Assistant1"
+    observer:
+      name: "Observer1"
+      instruction: "Instruction for Observer1"
+  - input: "input2"
+    output: "output2"
+    assistant:
+      name: "Assistant2"
+      instruction: "Instruction for Assistant2"
+  - input: "input3"
+    output: "output3"
+    assistant:
+      name: "Assistant3"
+      instruction: "Instruction for Assistant3"
+    observer:
+      name: "Observer3"
+      instruction: "Instruction for Observer3"
