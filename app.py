@@ -5,8 +5,7 @@ from openai import AsyncAssistantEventHandler, OpenAI
 from openai.types.beta.threads import Text, TextDelta
 from typing_extensions import override
 
-from augmented import Worker
-from augmented.observer import Observer
+from augmented import Worker, Observer, TeamLead
 
 
 class EventHandler(AsyncAssistantEventHandler):
@@ -41,21 +40,17 @@ class EventHandler(AsyncAssistantEventHandler):
             self.current_message.actions = finish_actions
             
         await self.current_message.update()
-        
+
+async def ask_user_for_input(input_name: str) -> str:
+    input_ask = await cl.AskUserMessage(content=f"Please provide the input {input_name}!", timeout=60).send()
+    input = input_ask.get('output', 'No input provided') if input_ask else 'No input provided'
+    return input
+    
 @cl.on_chat_start
 async def start():
-    learning_goal = await cl.AskUserMessage(content="Please provide the learning goal!", timeout=30).send()
-    learning_goal_str = learning_goal.get('output', 'fun facts about Lenin') if learning_goal else 'fun facts about Lenin'
-
-    worker =  Worker(
-        "Content worker", 
-        "You are a content creator assistant."
-        "You work together with the user - the facilitator - to create lesson content for the learning goals specified in the input."
-        "This is not an entire lesson plan just content to be used in one: stories, fun facts, elements to be used by a facilitator."
-        "Make sure the content is fun, interesting for students who are high school juniors."
-        "Input: learning goals. "
-        "Output: content for a each learning goal that the facilitator can later use to build out their lesson plan.",
-        f"Learning goal: {learning_goal_str}")
+    teamlead = TeamLead(ask_user_for_input)
+    cl.user_session.set("teamlead", teamlead)
+    worker = await teamlead.get_next_worker()
     cl.user_session.set("worker",worker)
     # the AI starts
     await worker.get_next_assistant_message(EventHandler())
@@ -118,8 +113,7 @@ async def get_output():
         msg.actions=actions
         msg.elements=elements
         await msg.update()
-        
-    
+            
 @cl.action_callback("confirm_output")
 async def confirm_output(action: cl.Action):
     # after the user or the AI has decided that the job is complete the AI generated the output and presented it for the user.
@@ -131,23 +125,25 @@ async def confirm_output(action: cl.Action):
     if worker is not None:
         # let the worker know 
         if action.value == "confirm":              
+            # TODO: do we need this?
             worker.output_is_good_to_go()
 
-            # ***
-            # Let's try an observer!
-            # observe the output
-            observer = Observer(
-                "Content Observer", 
-                "You are an observer. You look at conversations between an AI content creator assistant and a facilitator"
-                " and evaluate it with constructive criticism."
-                " Is this content something that a bored-out-of-their-maind high school junir would be interested in?"
-                " Your job is not to help the user or answer their questions but to observe and analyze the entire conversation. "
-                " Provide your analysis! Output as JSON structure containing an `observation` string",
-                worker
-            )
-            observation = observer.observe()
-            await cl.Message(content=f"Observation: {observation}").send()
-            # ***
+            teamlead = cl.user_session.get("teamlead")
+            teamlead.save_output()
+            
+            # check if the worker has an observer
+            observer = teamlead.get_observer()
+
+            if observer is not None:            
+                observation = observer.observe()
+                await cl.Message(content=f"Observation: {observation}").send()
+
+            # get the next worker
+            worker = await teamlead.get_next_worker()
+            cl.user_session.set("worker", worker)
+            # the AI starts for the next worker
+            await worker.get_next_assistant_message(EventHandler())
+                                
         else:        
             feedback = await cl.AskUserMessage(content="Please provide your feedback on the generated output!", timeout=30).send()
             feedback_str = feedback.get('output', 'Needs more work!') if feedback else 'Needs more work.'

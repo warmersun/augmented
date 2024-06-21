@@ -4,7 +4,7 @@ import os
 from openai import AsyncAssistantEventHandler, AsyncOpenAI, OpenAI
 from openai.types.beta import Assistant, Thread
 
-from augmented.worker import Worker
+from augmented import Worker
 
 # The Observer looks at a previous output and provides an observation such as a summary, an evaluation, a criticism
 # It should be passed an assistant that has its instructions include
