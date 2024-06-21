@@ -9,8 +9,9 @@ from augmented import Observer, TeamLead, Worker
 
 
 class EventHandler(AsyncAssistantEventHandler):
-    def __init__(self) -> None:
+    def __init__(self, author: str) -> None:
         super().__init__()
+        self.author = author
         self.current_message: cl.Message = None
         
     @override
@@ -21,7 +22,7 @@ class EventHandler(AsyncAssistantEventHandler):
             for previous_finish_action in previous_finish_actions:
                 await previous_finish_action.remove()
 
-        self.current_message = await cl.Message(content="").send()
+        self.current_message = await cl.Message(author=self.author, content="").send()
         # remember the new Finish button
         finish_actions =  [
             cl.Action(name="finish", value="finish", label="Finished", description="Indicate that the work is finished and the AI should now generate the output")
@@ -47,13 +48,14 @@ async def ask_user_for_input(input_name: str) -> str:
     return input
 
 class OutputEventHandler(AsyncAssistantEventHandler):
-    def __init__(self) -> None:
+    def __init__(self, author: str) -> None:
         super().__init__()
+        self.author = author
         self.current_message: cl.Message = None
 
     @override
     async def on_text_created(self, text: Text) -> None:
-        self.current_message = await cl.Message(content="Generating output...\n```").send()
+        self.current_message = await cl.Message(author=self.author, content="Generating output...\n```").send()
 
     @override
     async def on_text_delta(self, delta: TextDelta, snapshot: Text) -> None:
@@ -69,8 +71,9 @@ async def start():
     cl.user_session.set("teamlead", teamlead)
     worker = await teamlead.get_next_worker()
     cl.user_session.set("worker",worker)
+    
     # the AI starts
-    await worker.get_next_assistant_message(EventHandler())
+    await worker.get_next_assistant_message(EventHandler(worker.assistant.name))
 
 @cl.on_message
 async def main(message: cl.Message):
@@ -82,7 +85,7 @@ async def main(message: cl.Message):
     # if so, we ask the worker to generate the output and show it to the user to confirm
     # if not, we ask the worker to continue and return the next AI message to show 
     # NOTE: this will be more complicated with function calls, tool use, streaming
-
+    
     # get the worker from the user session
     worker = cl.user_session.get("worker")
     if worker is not None:
@@ -92,7 +95,7 @@ async def main(message: cl.Message):
         if worker.is_finished():
             await get_output()
         else:
-            await worker.get_next_assistant_message(EventHandler())    
+            await worker.get_next_assistant_message(EventHandler(worker.assistant.name))    
 
 async def get_output():
     # get the worker from the user session
@@ -101,10 +104,10 @@ async def get_output():
         
         # we ask the worker to generate the output and show it to the user to confirm
     
-        msg = cl.Message(content="")
+        msg = cl.Message(author=worker.assistant.name, content="")
         await msg.send()
     
-        output = await worker.generate_output(OutputEventHandler())
+        output = await worker.generate_output(OutputEventHandler(worker.assistant.name))
         output_parsed = json.loads(output)
         markdown = output_parsed.get("markdown", "No output generated")
         
@@ -156,7 +159,7 @@ async def confirm_output(action: cl.Action):
             observer = teamlead.get_observer()
 
             if observer is not None:            
-                output = observer.observe(OutputEventHandler())
+                output = await observer.observe(OutputEventHandler(observer.assistant.name))
                 output_parsed = json.loads(output)
                 markdown = output_parsed.get("markdown", "No output generated")
 
@@ -171,15 +174,16 @@ async def confirm_output(action: cl.Action):
             # get the next worker
             worker = await teamlead.get_next_worker()
             cl.user_session.set("worker", worker)
+            
             # the AI starts for the next worker
-            await worker.get_next_assistant_message(EventHandler())
+            await worker.get_next_assistant_message(EventHandler(worker.assistant.name))
                                 
         else:        
             feedback = await cl.AskUserMessage(content="Please provide your feedback on the generated output!", timeout=30).send()
             feedback_str = feedback.get('output', 'Needs more work!') if feedback else 'Needs more work.'
             worker.output_needs_work(feedback_str)
             # we ask the worker to continue and return the next AI message to show
-            await worker.get_next_assistant_message(EventHandler())
+            await worker.get_next_assistant_message(EventHandler(worker.assistant.name))
             
         # remove the action buttons from the UI
         actions = cl.user_session.get("actions")
