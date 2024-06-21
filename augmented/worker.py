@@ -2,7 +2,7 @@ import json
 import os
 
 from openai import AsyncAssistantEventHandler, AsyncOpenAI, OpenAI
-from openai.types.beta import Assistant
+from openai.types.beta import Assistant, assistant, thread
 
 
 class Worker:
@@ -42,46 +42,44 @@ class Worker:
   def is_finished(self) -> bool:
     return self.finished
 
-  import json
 
-  def generate_output(self) -> str:
-      output_run = self.client.beta.threads.runs.create_and_poll(
-          thread_id=self.thread.id,
-          assistant_id=self.assistant.id,
-          # TODO: support multiple outputs
-          instructions= (self.assistant.instructions or "") + "Generate the output. Remember, the output is a JSON object with the just a single key: 'output' and the value is a string.",
-          additional_instructions=f"The input is: {self.input}",
-          response_format={"type": "json_object"}
-      )
-      if output_run.status == 'completed':
-          messages = self.client.beta.threads.messages.list(
-              thread_id=self.thread.id,
-              run_id=output_run.id
-          )
-          # Check if there are messages in the response
-          if messages.data:
-              for message in messages:
-                  # Access the text content of each message
-                  if message.content[0].type == 'text':
-                      output_text = message.content[0].text.value
-                      try:
-                          output_json = json.loads(output_text)
-                          self.output = output_json.get("output", "Failed to generate output")
-                      except json.JSONDecodeError:
-                          self.output = "Failed to decode JSON"
-                      except Exception as e:
-                          self.output = f"Unexpected error: {str(e)}"
-                      return str(self.output)
-                  else:
-                      # Handle case where message content is not text
-                      return "Message content is not text."
-          else:
-              # Handle case where no messages are found
-              return "No messages found."
-
-      # Handle case where output run status is not completed
-      return f"Output run status: {output_run.status}"
-  
+  async def generate_output(self, event_handler: AsyncAssistantEventHandler) -> str:
+    async with self.async_client.beta.threads.runs.stream(
+      thread_id=self.thread.id,
+      assistant_id=self.assistant.id,
+      instructions= (self.assistant.instructions or "") + 
+      "Generate the output. Remember, the output is a JSON object. "
+      "Use JSON structure as you see fit. "
+      "It must include the key 'markdown' with the value being the full text of the output in Markdown format. "
+      "This will be used to present the output to the user whereas the entire JSON strucure will be used by other AI assistants as input.",
+      additional_instructions=f"The input is: {self.input}",
+      response_format={"type": "json_object"},
+      event_handler=event_handler
+    ) as stream:
+      await stream.until_done()
+    messages = self.client.beta.threads.messages.list(
+      thread_id=self.thread.id
+    )
+    # Check if there are messages in the response
+    if messages.data:
+        for message in messages:
+            # Access the text content of each message
+            if message.content[0].type == 'text':
+                try:  
+                  self.output = message.content[0].text.value
+                except Exception as e:
+                    self.output = f"Unexpected error: {str(e)}"
+                return str(self.output)
+            else:
+                # Handle case where message content is not text
+                return "Message content is not text."
+    else:
+        # Handle case where no messages are found
+        return "No messages found."
+    
+    # Handle case where output run status is not completed
+    return f"Output run status: {output_run.status}"
+        
   async def get_next_assistant_message(self, event_handler: AsyncAssistantEventHandler) -> None:
     async with self.async_client.beta.threads.runs.stream(
       thread_id=self.thread.id,

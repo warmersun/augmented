@@ -35,39 +35,35 @@ class Observer:
     self.thread = worker.thread
     self.observation = ""
 
-  def observe(self) -> str:
-    run = self.client.beta.threads.runs.create_and_poll(
-      thread_id=self.thread.id,
-      assistant_id=self.assistant.id,
-      additional_instructions=
-        f"The original input was:\n***\n{self.input}.\n***\nThe original output was:\n***\n{self.output}\n***\n"
+  async def observe(self, event_handler: AsyncAssistantEventHandler) -> str:
+    async with self.async_client.beta.threads.runs.stream(
+        thread_id=self.thread.id,
+        assistant_id=self.assistant.id,
+        additional_instructions=
+        f"The original input was:\n***\n{self.input}.\n***\nThe original output was:\n***\n{self.output}\n***\n",
+        event_handler=event_handler
+    ) as stream:
+        await stream.until_done()
+    messages = self.client.beta.threads.messages.list(
+        thread_id=self.thread.id
     )
-    if run.status == 'completed':
-      messages = self.client.beta.threads.messages.list(
-          thread_id=self.thread.id,
-          run_id=run.id
-      )
-      # Check if there are messages in the response
-      if messages.data:
-          for message in messages:
-              # Access the text content of each message
-              if message.content[0].type == 'text':
-                  observation_text = message.content[0].text.value
-                  try:
-                      observation_json = json.loads(observation_text)
-                      self.observation = observation_json.get("observation", "Failed to generate observation.")
-                  except json.JSONDecodeError:
-                      self.observation = "Failed to decode JSON"
-                  except Exception as e:
-                      self.observation = f"Unexpected error: {str(e)}"
-                  return str(self.observation)
-              else:
-                  # Handle case where message content is not text
-                  return "Message content is not text."
-      else:
-          # Handle case where no messages are found
-          return "No messages found."
-
+    # Check if there are messages in the response
+    if messages.data:
+      for message in messages:
+          # Access the text content of each message
+          if message.content[0].type == 'text':
+              try:
+                self.observation = message.content[0].text.value
+              except Exception as e:
+                  self.observation = f"Unexpected error: {str(e)}"
+              return str(self.observation)
+          else:
+              # Handle case where message content is not text
+              return "Message content is not text."
+    else:
+      # Handle case where no messages are found
+      return "No messages found."
+    
     # Handle case where output run status is not completed
     return f"Output run status: {run.status}"
 

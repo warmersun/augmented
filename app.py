@@ -1,11 +1,11 @@
-import os
+import json
 
 import chainlit as cl
-from openai import AsyncAssistantEventHandler, OpenAI
+from openai import AsyncAssistantEventHandler
 from openai.types.beta.threads import Text, TextDelta
 from typing_extensions import override
 
-from augmented import Worker, Observer, TeamLead
+from augmented import Observer, TeamLead, Worker
 
 
 class EventHandler(AsyncAssistantEventHandler):
@@ -45,6 +45,23 @@ async def ask_user_for_input(input_name: str) -> str:
     input_ask = await cl.AskUserMessage(content=f"Please provide the input {input_name}!", timeout=60).send()
     input = input_ask.get('output', 'No input provided') if input_ask else 'No input provided'
     return input
+
+class OutputEventHandler(AsyncAssistantEventHandler):
+    def __init__(self) -> None:
+        super().__init__()
+        self.current_message: cl.Message = None
+
+    @override
+    async def on_text_created(self, text: Text) -> None:
+        self.current_message = await cl.Message(content="Generating output...\n```").send()
+
+    @override
+    async def on_text_delta(self, delta: TextDelta, snapshot: Text) -> None:
+         await self.current_message.stream_token(delta.value or "")
+
+    @override
+    async def on_text_done(self, text: Text) -> None:
+        await self.current_message.remove()
     
 @cl.on_chat_start
 async def start():
@@ -87,7 +104,10 @@ async def get_output():
         msg = cl.Message(content="")
         await msg.send()
     
-        output = worker.generate_output()
+        output = await worker.generate_output(OutputEventHandler())
+        output_parsed = json.loads(output)
+        markdown = output_parsed.get("markdown", "No output generated")
+        
         actions = [
             # confirm
             cl.Action(
@@ -106,7 +126,8 @@ async def get_output():
         ]
         cl.user_session.set("actions", actions)
         elements = [
-            cl.Text(name="output", content=output, display="inline")
+            cl.Text(name="markdown", content=markdown, display="inline"),
+            cl.Text(name="output", content=output, display="side", language="javascript")
         ]
     
         msg.content ="Confirm the output is good to go!"
@@ -135,8 +156,17 @@ async def confirm_output(action: cl.Action):
             observer = teamlead.get_observer()
 
             if observer is not None:            
-                observation = observer.observe()
-                await cl.Message(content=f"Observation: {observation}").send()
+                output = observer.observe(OutputEventHandler())
+                output_parsed = json.loads(output)
+                markdown = output_parsed.get("markdown", "No output generated")
+
+                await cl.Message(
+                    content="Observation: ", 
+                    elements = [
+                        cl.Text(name="markdown", content=markdown, display="inline"),
+                        cl.Text(name="output", content=output, display="side", language="javascript")
+                    ]
+                ).send()
 
             # get the next worker
             worker = await teamlead.get_next_worker()
