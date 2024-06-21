@@ -69,11 +69,56 @@ class OutputEventHandler(AsyncAssistantEventHandler):
 async def start():
     teamlead = TeamLead(ask_user_for_input)
     cl.user_session.set("teamlead", teamlead)
+
+    # show task list
+    await show_task_list()
+
     worker = await teamlead.get_next_worker()
     cl.user_session.set("worker",worker)
+    await task_running(worker.task)
     
     # the AI starts
     await worker.get_next_assistant_message(EventHandler(worker.assistant.name))
+
+# manage the task list that shows in the sidebar
+
+async def show_task_list() -> None:
+    teamlead = cl.user_session.get("teamlead")
+    if teamlead is None:
+        return
+    task_list = cl.TaskList()
+    task_list.status = "Running..."
+    tasks = {}
+    cl.user_session.set("task_list", task_list)
+    for worker_name, worker_config in teamlead.config.items():
+        task = cl.Task(title=f"{worker_config['task']}")
+        tasks[worker_config['task']] = task
+        await task_list.add_task(task)
+
+    cl.user_session.set("tasks", tasks)
+    await task_list.send()
+
+async def task_running(task_desc: str) -> None:
+    task_list = cl.user_session.get("task_list")
+    if task_list is None:
+        return
+    tasks = cl.user_session.get("tasks")
+    if tasks is None:
+        return
+    task = tasks[task_desc]
+    task.status = cl.TaskStatus.RUNNING
+    await task_list.update()
+
+async def task_done(task_desc: str) -> None:
+    task_list = cl.user_session.get("task_list")
+    if task_list is None:
+        return
+    tasks = cl.user_session.get("tasks")
+    if tasks is None:
+        return
+    task = tasks[task_desc]
+    task.status = cl.TaskStatus.DONE
+    await task_list.update()  
 
 @cl.on_message
 async def main(message: cl.Message):
@@ -154,6 +199,7 @@ async def confirm_output(action: cl.Action):
 
             teamlead = cl.user_session.get("teamlead")
             teamlead.save_output()
+            await task_done(worker.task)
             
             # check if the worker has an observer
             observer = teamlead.get_observer()
@@ -173,6 +219,7 @@ async def confirm_output(action: cl.Action):
 
             # get the next worker
             worker = await teamlead.get_next_worker()
+            await task_running(worker.task)
             cl.user_session.set("worker", worker)
             
             # the AI starts for the next worker

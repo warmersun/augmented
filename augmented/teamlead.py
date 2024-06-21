@@ -28,6 +28,7 @@ class TeamLead:
         # now we can construct the worker
         # assume it does not exist. If it did we overwrite it
         self._worker = Worker(
+          worker_config['task'],
           worker_config['assistant']['name'],
           worker_config['assistant']['instruction'],
           input

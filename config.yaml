@@ -1,6 +1,7 @@
 "Worker One":
   input: "Subject"
   output: "learning goals"
+  task: "Define learning goals"
   assistant:
     name: "Learning Goal Setter"
     instruction: |
@@ -11,6 +12,7 @@
 "Worker Two":
   input: "learning goals"
   output: "learning content"
+  task: "Define learning content"
   assistant:
     name: "Content Worker"
     instruction: |

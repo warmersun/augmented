@@ -6,7 +6,7 @@ from openai.types.beta import Assistant, assistant, thread
 
 
 class Worker:
-  def __init__(self, name: str, instructions: str, input: str) -> None:
+  def __init__(self, task_desc: str, name: str, instructions: str, input: str) -> None:
     self.client = OpenAI(
       api_key=os.environ['OPENAI_API_KEY'],
     ) 
@@ -18,6 +18,7 @@ class Worker:
       instructions=instructions,
       model="gpt-4o",
     )
+    self.task = task_desc
     self.input = input
     self.thread = self.client.beta.threads.create()
     self.run = None
