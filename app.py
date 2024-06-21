@@ -199,7 +199,6 @@ async def confirm_output(action: cl.Action):
 
             teamlead = cl.user_session.get("teamlead")
             teamlead.save_output()
-            await task_done(worker.task)
             
             # check if the worker has an observer
             observer = teamlead.get_observer()
@@ -216,6 +215,8 @@ async def confirm_output(action: cl.Action):
                         cl.Text(name="output", content=output, display="side", language="javascript")
                     ]
                 ).send()
+
+            await task_done(worker.task)
 
             # get the next worker
             worker = await teamlead.get_next_worker()
