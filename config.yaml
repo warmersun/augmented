@@ -1,7 +1,7 @@
 "Worker One":
   input: "Subject"
   output: "learning goals"
-  task: "Define learning goals"
+  task: "Set some learning goals"
   assistant:
     name: "Learning Goal Setter"
     instruction: |
@@ -12,7 +12,7 @@
 "Worker Two":
   input: "learning goals"
   output: "learning content"
-  task: "Define learning content"
+  task: "Create learning content based on those goals"
   assistant:
     name: "Content Worker"
     instruction: |
@@ -30,5 +30,5 @@
       Is this content something that a bored-out-of-their-maind high school junir would be interested in?
       Your job is not to help the user or answer their questions but to observe and analyze the entire conversation.
       Provide your analysis! Output as JSON structure as you see fit.
-      It must include the key 'markdown' with the value being the full text of the observation in Markdown format.
+      It must include the key 'markdown' at the root level with the value being the full text of the observation in Markdown format.
       This will be used to present the observation to the user whereas the entire JSON strucure will be used by other AI assistants as input.

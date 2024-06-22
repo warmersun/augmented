@@ -51,7 +51,7 @@ class Worker:
       instructions= (self.assistant.instructions or "") + 
       "Generate the output. Remember, the output is a JSON object. "
       "Use JSON structure as you see fit. "
-      "It must include the key 'markdown' with the value being the full text of the output in Markdown format. "
+      "It must include the key 'markdown' at the root level with the value being the full text of the output in Markdown format. "
       "This will be used to present the output to the user whereas the entire JSON strucure will be used by other AI assistants as input.",
       additional_instructions=f"The input is: {self.input}",
       response_format={"type": "json_object"},
