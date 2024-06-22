@@ -44,6 +44,7 @@ class Worker:
     async with self.async_client.beta.threads.runs.stream(
       thread_id=self.thread.id,
       assistant_id=self.assistant.id,
+      tools = [],
       instructions= (self.assistant.instructions or "") + 
       "Generate the output. Remember, the output is a JSON object. "
       "Use JSON structure as you see fit. "

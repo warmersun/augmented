@@ -2,7 +2,9 @@ import json
 
 import chainlit as cl
 from openai import AsyncAssistantEventHandler
+from openai.types.beta import AssistantStreamEvent
 from openai.types.beta.threads import Text, TextDelta
+from openai.types.beta.threads.runs import ToolCall, ToolCallDelta
 from typing_extensions import override
 
 from augmented import Observer, TeamLead, Worker
@@ -41,11 +43,24 @@ class EventHandler(AsyncAssistantEventHandler):
             self.current_message.actions = finish_actions
             
         await self.current_message.update()
+    
+    @override
+    async def on_tool_call_done(self, tool_call: ToolCall) -> None:
+        if tool_call.type == "file_search":
+            await show_file_search()
+
+    @override
+    async def on_event(self, event: AssistantStreamEvent) -> None:
+        pass
 
 async def ask_user_for_input(input_name: str) -> str:
     input_ask = await cl.AskUserMessage(content=f"Please provide the input {input_name}!", timeout=60).send()
     input = input_ask.get('output', 'No input provided') if input_ask else 'No input provided'
     return input
+
+@cl.step(type="tool", name="File Search")
+async def show_file_search() -> None:
+    pass
 
 class OutputEventHandler(AsyncAssistantEventHandler):
     def __init__(self, author: str) -> None:
