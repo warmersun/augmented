@@ -1,3 +1,14 @@
+# Workers will be run in the sequence given here
+# Each worker has an input and produces and output
+# If the input is not know by the time the worker is run (from another, previous worker) then the user will be asked to enter it
+# assistant can be specified here with name and instruction or set up in the OpenAI platform and retrieved by assistant_id
+
+"Worker Zero":
+  input: "Age"
+  "output": "Subject"
+  task: "Define subject"
+  assistant:
+    id: "asst_kaDyp6JwnfMXvyN4krldPI3t"
 "Worker One":
   input: "Subject"
   output: "learning goals"

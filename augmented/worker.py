@@ -2,22 +2,18 @@ import json
 import os
 
 from openai import AsyncAssistantEventHandler, AsyncOpenAI, OpenAI
-from openai.types.beta import Assistant, assistant, thread
+from openai.types.beta import Assistant
 
 
 class Worker:
-  def __init__(self, task_desc: str, name: str, instructions: str, input: str) -> None:
+  def __init__(self, task_desc: str, assistant: Assistant, input: str) -> None:
     self.client = OpenAI(
       api_key=os.environ['OPENAI_API_KEY'],
     ) 
     self.async_client = AsyncOpenAI(
       api_key=os.environ['OPENAI_API_KEY'],
     )
-    self.assistant = self.client.beta.assistants.create(
-      name=name,
-      instructions=instructions,
-      model="gpt-4o",
-    )
+    self.assistant = assistant
     self.task = task_desc
     self.input = input
     self.thread = self.client.beta.threads.create()

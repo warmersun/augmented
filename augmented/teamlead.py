@@ -1,6 +1,11 @@
+import os
+from typing import Awaitable, Callable, Dict, List, Optional, Union
+
 import yaml
-from augmented import Worker, Observer
-from typing import Callable, Awaitable, Optional, List, Dict, Union
+from openai import OpenAI
+
+from augmented import Observer, Worker
+
 
 class TeamLead:
   @classmethod
@@ -14,6 +19,10 @@ class TeamLead:
     self.config = self._load_config('config.yaml')
     self.next_worker_ndx = 0
     self.ask_user_func =  ask_user_func
+    self.client = OpenAI(
+      api_key=os.environ['OPENAI_API_KEY'],
+    ) 
+
 
   async def get_next_worker(self) -> Worker:
     for index, (worker_name, worker_config) in enumerate(self.config.items()):
@@ -27,10 +36,20 @@ class TeamLead:
           input = await self.ask_user_func(input_name)
         # now we can construct the worker
         # assume it does not exist. If it did we overwrite it
+        # create the assistant
+        assistant = None
+        if worker_config['assistant'].get('id') is not None:
+          assistant = self.client.beta.assistants.retrieve(worker_config['assistant']['id'])
+        else:
+          assistant = self.client.beta.assistants.create(
+            name= worker_config['assistant']['name'],
+            instructions=worker_config['assistant']['instruction'],
+            model="gpt-4o",
+          )
+          # pass it in to the worker
         self._worker = Worker(
           worker_config['task'],
-          worker_config['assistant']['name'],
-          worker_config['assistant']['instruction'],
+          assistant,
           input
         )
         self.current_worker_name = worker_name
