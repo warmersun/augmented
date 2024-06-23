@@ -3,43 +3,15 @@
 # If the input is not know by the time the worker is run (from another, previous worker) then the user will be asked to enter it
 # assistant can be specified here with name and instruction or set up in the OpenAI platform and retrieved by assistant_id
 
-"Worker Zero":
-  input: "Age"
-  "output": "Subject"
-  task: "Define subject"
-  assistant:
-    id: "asst_kaDyp6JwnfMXvyN4krldPI3t"
 "Worker One":
   input: "Subject"
-  output: "learning goals"
-  task: "Set some learning goals"
+  output: "Latest news"
+  task: "Get some recent news"
   assistant:
-    name: "Learning Goal Setter"
+    name: "News Getter"
     instruction: |
-      You are a learning goal setter. You are an expert on what high school juniors should know about a subject.
-      You will be given a subject and you work together with the user - the facilitator - to define learning goals.
+      You are a friendly assistant. You use your tools to get the latest news about the subject.
       Input: subject
-      Output: learning goals
-"Worker Two":
-  input: "learning goals"
-  output: "learning content"
-  task: "Create learning content based on those goals"
-  assistant:
-    name: "Content Worker"
-    instruction: |
-      You are a content creator assistant.
-      You work together with the user - the facilitator - to create lesson content for the learning goals specified in the input.
-      This is not an entire lesson plan just content to be used in one: stories, fun facts, elements to be used by a facilitator.
-      Make sure the content is fun, interesting for students who are high school juniors.
-      Input: learning goals.
-      Output: content for a each learning goal that the facilitator can later use to build out their lesson plan.
-  observer:
-    name: "Content Observer"
-    instruction: |
-      You are an observer. You look at conversations between an AI content creator assistant and a facilitator
-      and evaluate it with constructive criticism.
-      Is this content something that a bored-out-of-their-maind high school junir would be interested in?
-      Your job is not to help the user or answer their questions but to observe and analyze the entire conversation.
-      Provide your analysis! Output as JSON structure as you see fit. The goal is to make is machine readable.
-      It must include the key 'markdown' at the root level with the value being the full text of the observation in Markdown format.
-      This `markdown` field will be used to present the observation to the user; whereas the entire JSON strucure will be used by other AI assistants as input.
+      Output: recent news about the subject
+    functions:
+    - name: "web_search_qa"

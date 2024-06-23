@@ -1,5 +1,6 @@
+import json
 import os
-from typing import Awaitable, Callable, Dict, List, Optional, Union
+from typing import Awaitable, Callable, Optional
 
 import yaml
 from openai import OpenAI
@@ -17,6 +18,7 @@ class TeamLead:
     self.documents = {}
     self._worker = None
     self.config = self._load_config('config.yaml')
+    self.function_definitions = self._load_config('function_definitions.yaml')
     self.next_worker_ndx = 0
     self.ask_user_func =  ask_user_func
     self.client = OpenAI(
@@ -41,11 +43,21 @@ class TeamLead:
         if worker_config['assistant'].get('id') is not None:
           assistant = self.client.beta.assistants.retrieve(worker_config['assistant']['id'])
         else:
+          tool_functions = []
+          if worker_config['assistant'].get('functions') is not None:
+            for function in worker_config['assistant']['functions']:
+              tool_functions.append(
+                {
+                  "type": "function", 
+                  "function": json.loads(self.function_definitions[function['name']])
+                }
+              )
           assistant = self.client.beta.assistants.create(
             name= worker_config['assistant']['name'],
             instructions=worker_config['assistant']['instruction'],
             model="gpt-4o",
-          )
+            tools = tool_functions
+          )              
           # pass it in to the worker
         self._worker = Worker(
           worker_config['task'],

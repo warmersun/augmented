@@ -1,13 +1,15 @@
 import json
+import os
 
 import chainlit as cl
-from openai import AsyncAssistantEventHandler
+from openai import AsyncAssistantEventHandler, AsyncOpenAI
 from openai.types.beta import AssistantStreamEvent
 from openai.types.beta.threads import Text, TextDelta
-from openai.types.beta.threads.runs import ToolCall, ToolCallDelta
+from openai.types.beta.threads.runs import ToolCall
 from typing_extensions import override
 
-from augmented import Observer, TeamLead, Worker
+from augmented import TeamLead
+from function_tools import web_search_qa
 
 
 class EventHandler(AsyncAssistantEventHandler):
@@ -15,6 +17,9 @@ class EventHandler(AsyncAssistantEventHandler):
         super().__init__()
         self.author = author
         self.current_message: cl.Message = None
+        self.async_client = AsyncOpenAI(
+          api_key=os.environ['OPENAI_API_KEY'],
+        )
         
     @override
     async def on_text_created(self, text: Text) -> None:
@@ -47,11 +52,35 @@ class EventHandler(AsyncAssistantEventHandler):
     @override
     async def on_tool_call_done(self, tool_call: ToolCall) -> None:
         if tool_call.type == "file_search":
-            await show_file_search()
+            await show_file_search()               
 
     @override
     async def on_event(self, event: AssistantStreamEvent) -> None:
-        pass
+        # Retrieve events that are denoted with 'requires_action'
+        # since these will have our tool_calls
+        if event.event == 'thread.run.requires_action':
+            run_id = event.data.id  # Retrieve the run ID from the event data
+            await self.handle_requires_action(event.data, run_id)
+
+    async def handle_requires_action(self, data, run_id):
+      tool_outputs = []
+
+      for tool in data.required_action.submit_tool_outputs.tool_calls:
+        if tool.function.name == "web_search_qa":
+            arguments = json.loads(tool.function.arguments)
+            tool_outputs.append({"tool_call_id": tool.id, "output": await web_search_qa(arguments['question'])})
+        # Submit all tool_outputs at the same time
+        await self.submit_tool_outputs(tool_outputs, run_id)
+
+    async def submit_tool_outputs(self, tool_outputs, run_id):
+      # Use the submit_tool_outputs_stream helper
+      async with self.async_client.beta.threads.runs.submit_tool_outputs_stream(
+        thread_id=self.current_run.thread_id,
+        run_id=self.current_run.id,
+        tool_outputs=tool_outputs,
+        event_handler=EventHandler(self.author),
+      ) as stream:
+        await stream.until_done()
 
 async def ask_user_for_input(input_name: str) -> str:
     input_ask = await cl.AskUserMessage(content=f"Please provide the input {input_name}!", timeout=60).send()
@@ -235,11 +264,17 @@ async def confirm_output(action: cl.Action):
 
             # get the next worker
             worker = await teamlead.get_next_worker()
-            await task_running(worker.task)
-            cl.user_session.set("worker", worker)
-            
-            # the AI starts for the next worker
-            await worker.get_next_assistant_message(EventHandler(worker.assistant.name))
+            if worker is not None:
+                await task_running(worker.task)
+                cl.user_session.set("worker", worker)
+                # the AI starts for the next worker
+                await worker.get_next_assistant_message(EventHandler(worker.assistant.name))
+            else:
+                # no more workers
+                await cl.Message(content="All done!").send()
+                task_list = cl.user_session.get("task_list")
+                task_list.status = "Done"
+                await task_list.update()
                                 
         else:        
             feedback = await cl.AskUserMessage(content="Please provide your feedback on the generated output!", timeout=30).send()

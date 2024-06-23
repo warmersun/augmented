@@ -1,0 +1,16 @@
+web_search_qa: |
+  {
+    "name": "web_search_qa",
+    "description": "Calls an always up-to-date online LLM to perform a web search and answer the question based on what the LLM knows and recent information from the web.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "question": {
+          "type": "string",
+          "description": "The question to be answered."
+        }
+      },
+      "required": ["question"]
+    }
+  }
+  
