@@ -16,7 +16,7 @@ class TeamLead:
       
   def __init__(self, ask_user_func: Callable[[str], Awaitable[str]]):
     self.documents = {}
-    self._worker = None
+    self._worker : Optional[Worker] = None
     self.config = self._load_config('config.yaml')
     self.function_definitions = self._load_config('function_definitions.yaml')
     self.next_worker_ndx = 0
@@ -26,7 +26,7 @@ class TeamLead:
     ) 
 
 
-  async def get_next_worker(self) -> Worker:
+  async def get_next_worker(self) -> Optional[Worker]:
     for index, (worker_name, worker_config) in enumerate(self.config.items()):
       if index == self.next_worker_ndx:
         self.next_worker_ndx += 1
@@ -70,12 +70,16 @@ class TeamLead:
 
   def save_output(self) -> None:
     worker_config = self.config.get(self.current_worker_name)
+    assert worker_config is not None, f"Worker config for {self.current_worker_name} should exist"
     output_name = worker_config.get('output')
+    assert self._worker is not None, "self._worker should be set before calling save_output"
     output = self._worker.output
     self.documents[output_name] = output
 
   def get_observer(self) -> Optional[Observer]:
+    assert self._worker is not None, "self._worker should be set before calling get_observer"
     worker_config = self.config.get(self.current_worker_name)
+    assert worker_config is not None, f"Worker config for {self.current_worker_name} should exist"
     observer_config = worker_config.get('observer')
     if observer_config is None:
       return None

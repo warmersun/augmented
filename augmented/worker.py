@@ -1,7 +1,7 @@
 import json
 import os
 
-from openai import AsyncAssistantEventHandler, AsyncOpenAI, OpenAI
+from openai import AsyncAssistantEventHandler, AsyncOpenAI, NotGiven, OpenAI
 from openai.types.beta import Assistant
 
 
@@ -23,7 +23,7 @@ class Worker:
     self.output_confirmed = False
 
   def submit_user_message(self, msg: str) -> None:
-    message = self.client.beta.threads.messages.create(
+    self.client.beta.threads.messages.create(
       thread_id=self.thread.id,
       role = "user",
       content = msg
@@ -41,6 +41,7 @@ class Worker:
 
 
   async def generate_output(self, event_handler: AsyncAssistantEventHandler) -> str:
+    run_id = None
     async with self.async_client.beta.threads.runs.stream(
       thread_id=self.thread.id,
       assistant_id=self.assistant.id,
@@ -54,9 +55,16 @@ class Worker:
       response_format={"type": "json_object"},
       event_handler=event_handler
     ) as stream:
+      async for event in stream:
+        # when the event is thread.run.created
+        if event.event == "thread.run.created":
+            run_id = event.data.id
+            break
       await stream.until_done()
+    assert run_id is not None, "Run was not created properly, run.id was not found!"
     messages = self.client.beta.threads.messages.list(
-      thread_id=self.thread.id
+      thread_id=self.thread.id,
+      run_id=run_id
     )
     # Check if there are messages in the response
     if messages.data:

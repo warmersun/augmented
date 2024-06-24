@@ -36,6 +36,7 @@ class Observer:
     self.observation = ""
 
   async def observe(self, event_handler: AsyncAssistantEventHandler) -> str:
+    run_id = None
     async with self.async_client.beta.threads.runs.stream(
         thread_id=self.thread.id,
         assistant_id=self.assistant.id,
@@ -43,9 +44,16 @@ class Observer:
         f"The original input was:\n***\n{self.input}.\n***\nThe original output was:\n***\n{self.output}\n***\n",
         event_handler=event_handler
     ) as stream:
+      async for event in stream:
+        # when the event is thread.run.created
+        if event.event == "thread.run.created":
+            run_id = event.data.id
+            break
         await stream.until_done()
+    assert run_id is not None, "Run was not created properly, run.id was not found!"
     messages = self.client.beta.threads.messages.list(
-        thread_id=self.thread.id
+        thread_id=self.thread.id,
+        run_id=run_id
     )
     # Check if there are messages in the response
     if messages.data:
