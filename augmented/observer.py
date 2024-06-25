@@ -5,6 +5,7 @@ from openai import AsyncAssistantEventHandler, AsyncOpenAI, OpenAI
 from openai.types.beta import Assistant, Thread
 
 from augmented import Worker
+from augmented.util import json_mode_instruction_ending
 
 # The Observer looks at a previous output and provides an observation such as a summary, an evaluation, a criticism
 # It should be passed an assistant that has its instructions include
@@ -40,15 +41,18 @@ class Observer:
     async with self.async_client.beta.threads.runs.stream(
         thread_id=self.thread.id,
         assistant_id=self.assistant.id,
-        additional_instructions=
-        f"The original input was:\n***\n{self.input}.\n***\nThe original output was:\n***\n{self.output}\n***\n",
+        instructions= (self.assistant.instructions or "") + json_mode_instruction_ending("observation"),
+        additional_instructions=f"The original input was:\n***\n{self.input}.\n***\nThe original output was:\n***\n{self.output}\n***\n",
+        response_format={"type": "json_object"},
         event_handler=event_handler
     ) as stream:
-      async for event in stream:
-        # when the event is thread.run.created
-        if event.event == "thread.run.created":
-            run_id = event.data.id
-            break
+      try:
+        async for event in stream:
+          # when the event is thread.run.created
+          if event.event == "thread.run.created":
+              run_id = event.data.id
+              break
+      finally:
         await stream.until_done()
     assert run_id is not None, "Run was not created properly, run.id was not found!"
     messages = self.client.beta.threads.messages.list(
@@ -71,8 +75,5 @@ class Observer:
     else:
       # Handle case where no messages are found
       return "No messages found."
-    
-    # Handle case where output run status is not completed
-    return f"Output run status: {run.status}"
 
 

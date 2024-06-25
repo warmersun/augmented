@@ -1,8 +1,9 @@
-import json
 import os
 
 from openai import AsyncAssistantEventHandler, AsyncOpenAI, NotGiven, OpenAI
 from openai.types.beta import Assistant
+
+from augmented.util import json_mode_instruction_ending
 
 
 class Worker:
@@ -46,21 +47,19 @@ class Worker:
       thread_id=self.thread.id,
       assistant_id=self.assistant.id,
       tools = [],
-      instructions= (self.assistant.instructions or "") + 
-      "Generate the output. Remember, the output is a JSON object. "
-      "Use JSON structure as you see fit. The goal is to make is machine readable."
-      "It must include the key 'markdown' at the root level with the value being the full text of the output in Markdown format. "
-      "This `markdown` field will be used to present the output to the user; whereas the entire JSON strucure will be used by other AI assistants as input.",
+      instructions= (self.assistant.instructions or "") + json_mode_instruction_ending(),
       additional_instructions=f"The input is: {self.input}",
       response_format={"type": "json_object"},
       event_handler=event_handler
     ) as stream:
-      async for event in stream:
-        # when the event is thread.run.created
-        if event.event == "thread.run.created":
-            run_id = event.data.id
-            break
-      await stream.until_done()
+      try:
+        async for event in stream:
+          # when the event is thread.run.created
+          if event.event == "thread.run.created":
+              run_id = event.data.id
+              break
+      finally:
+        await stream.until_done()
     assert run_id is not None, "Run was not created properly, run.id was not found!"
     messages = self.client.beta.threads.messages.list(
       thread_id=self.thread.id,
@@ -82,9 +81,6 @@ class Worker:
     else:
         # Handle case where no messages are found
         return "No messages found."
-    
-    # Handle case where output run status is not completed
-    return f"Output run status: {output_run.status}"
         
   async def get_next_assistant_message(self, event_handler: AsyncAssistantEventHandler) -> None:
     async with self.async_client.beta.threads.runs.stream(
