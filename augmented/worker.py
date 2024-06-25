@@ -18,7 +18,7 @@ class Worker:
     self.task = task_desc
     self.input = input
     self.thread = self.client.beta.threads.create()
-    self.run = None
+    self.run_id = None
     self.finished = False
     self.output = None
     self.output_confirmed = False
@@ -42,7 +42,6 @@ class Worker:
 
 
   async def generate_output(self, event_handler: AsyncAssistantEventHandler) -> str:
-    run_id = None
     async with self.async_client.beta.threads.runs.stream(
       thread_id=self.thread.id,
       assistant_id=self.assistant.id,
@@ -56,15 +55,16 @@ class Worker:
         async for event in stream:
           # when the event is thread.run.created
           if event.event == "thread.run.created":
-              run_id = event.data.id
+              self.run_id = event.data.id
               break
       finally:
         await stream.until_done()
-    assert run_id is not None, "Run was not created properly, run.id was not found!"
+    assert self.run_id is not None, "Run was not created properly, run.id was not found!"
     messages = self.client.beta.threads.messages.list(
       thread_id=self.thread.id,
-      run_id=run_id
+      run_id=self.run_id
     )
+    self.run_id = None
     # Check if there are messages in the response
     if messages.data:
         for message in messages:
@@ -89,8 +89,26 @@ class Worker:
       additional_instructions=f"The input is: {self.input}",
       event_handler=event_handler
     ) as stream:
-      await stream.until_done()
+      try:
+        async for event in stream:
+          if event.event == "thread.run.created":
+            self.run_id = event.data.id
+            break
+      finally:
+        await stream.until_done()
+        self.run_id = None
 
+  async def cancel_run(self) -> None:
+    if self.run_id is not None:
+      try:
+        await self.async_client.beta.threads.runs.cancel(
+          thread_id=self.thread.id,
+          run_id=self.run_id
+        )
+        self.output = None
+      except Exception as e:
+        print(f"Error cancelling run: {str(e)}")
+    
   def output_is_good_to_go(self) -> None:
     self.output_confirmed = True
 

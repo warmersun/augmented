@@ -124,6 +124,15 @@ async def start():
     # the AI starts
     await worker.get_next_assistant_message(EventHandler(worker.assistant.name))
 
+@cl.on_stop
+async def on_stop():
+    # cancel-run is safe to call, even if the run is not running
+    worker = cl.user_session.get("worker")
+    await worker.cancel_run() if worker else None
+    observer = cl.user_session.get("observer")
+    await observer.cancel_run() if observer else None   
+    
+
 # manage the task list that shows in the sidebar
 
 async def show_task_list() -> None:
@@ -197,36 +206,41 @@ async def get_output():
         await msg.send()
     
         output = await worker.generate_output(OutputEventHandler(worker.assistant.name))
-        output_parsed = json.loads(output)
-        markdown = output_parsed.get("markdown", "No output generated")
-        
-        actions = [
-            # confirm
-            cl.Action(
-                name='confirm_output', 
-                value="confirm", 
-                label="Confirm", 
-                description="Confirm the output is good to go."
-            ),
-            # cancel
-            cl.Action(
-                name='confirm_output', 
-                value="needs_more_work", 
-                label="Needs more work...", 
-                description="Need to keep working on the output."
-            )
-        ]
-        cl.user_session.set("actions", actions)
-        elements = [
-            cl.Text(name="markdown", content=markdown, display="inline"),
-            cl.Text(name="output", content=output, display="side", language="javascript")
-        ]
-    
-        msg.content ="Confirm the output is good to go!"
-        msg.actions=actions
-        msg.elements=elements
-        await msg.update()
+
+        try:
+            output_parsed = json.loads(output)
+            markdown = output_parsed.get("markdown", "No output generated")
             
+            actions = [
+                # confirm
+                cl.Action(
+                    name='confirm_output', 
+                    value="confirm", 
+                    label="Confirm", 
+                    description="Confirm the output is good to go."
+                ),
+                # cancel
+                cl.Action(
+                    name='confirm_output', 
+                    value="needs_more_work", 
+                    label="Needs more work...", 
+                    description="Need to keep working on the output."
+                )
+            ]
+            cl.user_session.set("actions", actions)
+            elements = [
+                cl.Text(name="markdown", content=markdown, display="inline"),
+                cl.Text(name="output", content=output, display="side", language="javascript")
+            ]
+        
+            msg.content ="Confirm the output is good to go!"
+            msg.actions=actions
+            msg.elements=elements
+            await msg.update()
+        except json.JSONDecodeError as e:
+            msg.content = "Something went wrong with the output. Please try again."
+            await msg.update()
+                
 @cl.action_callback("confirm_output")
 async def confirm_output(action: cl.Action):
     # after the user or the AI has decided that the job is complete the AI generated the output and presented it for the user.
@@ -247,19 +261,23 @@ async def confirm_output(action: cl.Action):
             # check if the worker has an observer
             observer = teamlead.get_observer()
 
-            if observer is not None:            
+            if observer is not None:
+                cl.user_session.set("observer", observer)
                 output = await observer.observe(OutputEventHandler(observer.assistant.name))
-                output_parsed = json.loads(output)
-                markdown = output_parsed.get("markdown", "No output generated")
-
-                await cl.Message(
-                    content="Observation: ", 
-                    elements = [
-                        cl.Text(name="markdown", content=markdown, display="inline"),
-                        cl.Text(name="output", content=output, display="side", language="javascript")
-                    ]
-                ).send()
-
+                try:
+                    output_parsed = json.loads(output)
+                    markdown = output_parsed.get("markdown", "No output generated")
+    
+                    await cl.Message(
+                        content="Observation: ", 
+                        elements = [
+                            cl.Text(name="markdown", content=markdown, display="inline"),
+                            cl.Text(name="output", content=output, display="side", language="javascript")
+                        ]
+                    ).send()
+                except json.JSONDecodeError as e:
+                    await cl.Message(content="Something went wrong with the output. Please try again.").send()
+    
             await task_done(worker.task)
 
             # get the next worker

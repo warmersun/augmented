@@ -1,29 +1,11 @@
 {
   "files": {
-    "augmented/observer.py": [
+    "augmented/worker.py": [
       {
-        "id": "8cedef90-dfce-4c1a-8ba8-51ec6ca8194f",
-        "line": 49,
-        "version": 1069,
-        "index": 1951
-      },
-      {
-        "id": "9af3955d-47f6-4573-b9ed-47f4236a1cec",
-        "line": 55,
-        "version": 1069,
-        "index": 2166
-      },
-      {
-        "id": "b7c8f76e-f067-4ca7-adef-c377fa09356d",
-        "line": 62,
-        "version": 1069,
-        "index": 2440
-      },
-      {
-        "id": "a4bf787f-fe4b-4896-a48f-36f293889e53",
-        "line": 75,
-        "version": 1069,
-        "index": 2990
+        "id": "30b467b5-45aa-4c8e-8f32-6d2fa6e64610",
+        "line": 102,
+        "version": 4020,
+        "index": 3371
       }
     ]
   }
