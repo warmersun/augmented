@@ -11,6 +11,7 @@ from typing_extensions import override
 from augmented import TeamLead
 from function_tools import web_search_qa
 
+# event handler for next user message
 
 class EventHandler(AsyncAssistantEventHandler):
     def __init__(self, author: str) -> None:
@@ -87,9 +88,13 @@ async def ask_user_for_input(input_name: str) -> str:
     input = input_ask.get('output', 'No input provided') if input_ask else 'No input provided'
     return input
 
+# helper to show the file search tool being used
+
 @cl.step(type="tool", name="File Search")
 async def show_file_search() -> None:
     pass
+
+# event handler for output generation - where there is no user interaction
 
 class OutputEventHandler(AsyncAssistantEventHandler):
     def __init__(self, author: str) -> None:
@@ -108,7 +113,9 @@ class OutputEventHandler(AsyncAssistantEventHandler):
     @override
     async def on_text_done(self, text: Text) -> None:
         await self.current_message.remove()
-    
+
+# lifecycle events
+
 @cl.on_chat_start
 async def start():
     teamlead = TeamLead(ask_user_for_input)
@@ -131,47 +138,6 @@ async def on_stop():
     await worker.cancel_run() if worker else None
     observer = cl.user_session.get("observer")
     await observer.cancel_run() if observer else None   
-    
-
-# manage the task list that shows in the sidebar
-
-async def show_task_list() -> None:
-    teamlead = cl.user_session.get("teamlead")
-    if teamlead is None:
-        return
-    task_list = cl.TaskList()
-    task_list.status = "Running..."
-    tasks = {}
-    cl.user_session.set("task_list", task_list)
-    for worker_name, worker_config in teamlead.config.items():
-        task = cl.Task(title=f"{worker_config['task']}")
-        tasks[worker_config['task']] = task
-        await task_list.add_task(task)
-
-    cl.user_session.set("tasks", tasks)
-    await task_list.send()
-
-async def task_running(task_desc: str) -> None:
-    task_list = cl.user_session.get("task_list")
-    if task_list is None:
-        return
-    tasks = cl.user_session.get("tasks")
-    if tasks is None:
-        return
-    task = tasks[task_desc]
-    task.status = cl.TaskStatus.RUNNING
-    await task_list.update()
-
-async def task_done(task_desc: str) -> None:
-    task_list = cl.user_session.get("task_list")
-    if task_list is None:
-        return
-    tasks = cl.user_session.get("tasks")
-    if tasks is None:
-        return
-    task = tasks[task_desc]
-    task.status = cl.TaskStatus.DONE
-    await task_list.update()  
 
 @cl.on_message
 async def main(message: cl.Message):
@@ -318,6 +284,47 @@ async def finish(action: cl.Action):
 
     await action.remove()
     return "Finished! Generating output..."
+
+# manage the task list that shows in the sidebar
+
+async def show_task_list() -> None:
+    teamlead = cl.user_session.get("teamlead")
+    if teamlead is None:
+        return
+    task_list = cl.TaskList()
+    task_list.status = "Running..."
+    tasks = {}
+    cl.user_session.set("task_list", task_list)
+    for worker_name, worker_config in teamlead.config.items():
+        task = cl.Task(title=f"{worker_config['task']}")
+        tasks[worker_config['task']] = task
+        await task_list.add_task(task)
+
+    cl.user_session.set("tasks", tasks)
+    await task_list.send()
+
+async def task_running(task_desc: str) -> None:
+    task_list = cl.user_session.get("task_list")
+    if task_list is None:
+        return
+    tasks = cl.user_session.get("tasks")
+    if tasks is None:
+        return
+    task = tasks[task_desc]
+    task.status = cl.TaskStatus.RUNNING
+    await task_list.update()
+
+async def task_done(task_desc: str) -> None:
+    task_list = cl.user_session.get("task_list")
+    if task_list is None:
+        return
+    tasks = cl.user_session.get("tasks")
+    if tasks is None:
+        return
+    task = tasks[task_desc]
+    task.status = cl.TaskStatus.DONE
+    await task_list.update()  
+
 
 if __name__ == "__main__":
   from chainlit.cli import run_chainlit

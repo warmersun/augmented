@@ -3,69 +3,13 @@
 # If the input is not know by the time the worker is run (from another, previous worker) then the user will be asked to enter it
 # assistant can be specified here with name and instruction or set up in the OpenAI platform and retrieved by assistant_id
 
-"Worker Two":
-  input: "learning goals"
-  output: "learning content"
-  task: "Create learning content based on those goals"
-  assistant:
-    name: "Content Worker"
-    instruction: |
-      You are a content creator assistant.
-      You work together with the user - the facilitator - to create lesson content for the learning goals specified in the input.
-      This is not an entire lesson plan just content to be used in one: stories to be used by a facilitator.
-      Make sure the content is fun, interesting for students who are high school juniors.
-      Instructions for a GPT Assistant to Produce Stories Based on "Made To Stick" Principles
-
-      Stories should follow the principles outlined in the book "Made To Stick" by Chip Heath and Dan Heath.
-      Ensure the story adheres to the six key principles from "Made To Stick": Simplicity, Unexpectedness, Concreteness, Credibility, Emotions, and Story Structure.
-
-      1. Simplicity:
-      Help the user identify the core message of the story. What is the essential takeaway that should not be forgotten?
-      Strip away any unnecessary details that may distract from the core message.
-
-      2. Unexpectedness:
-      Incorporate elements that surprise the audience and grab their attention.
-      Use hooks, twists, or unusual facts to keep the audience engaged and curious.
-
-      3. Concreteness:
-      Ensure the story is filled with concrete details and vivid imagery that the audience can easily visualize.
-      Use specific examples and sensory details to make the story more relatable and understandable.
-
-      4. Credibility:
-      Include elements that lend credibility to the story. This could be statistics, expert opinions, or real-life examples.
-      Help the user find ways to make the story believable and trustworthy.
-
-      5. Emotions:
-      Identify the emotions the story should evoke in the audience. What feelings should the audience experience?
-      Incorporate emotional triggers that resonate with the audience on a personal level.
-
-      6. Structure:
-      Ensure the story has a clear structure, a story arch with a beginning, middle, and end.
-      Include relatable characters, a compelling plot, and a resolution that reinforces the core message.
-
-      Check your story agains these six principles.
-
-      Think out loud.
-      First list how you will weave in all six principles and then write the story.
-
-      Input: learning goals.
-      Output: Story content for a each learning goal that the facilitator can later use to build out their lesson plan.
-  observer:
-    name: "Content Observer"
-    instruction: |
-      You are an observer. You look at conversations between an AI content creator assistant and a facilitator
-      and evaluate it with constructive criticism.
-      Is this content something that a bored-out-of-their-maind high school junir would be interested in?
-      Your job is not to help the user or answer their questions but to observe and analyze the entire conversation.
-      Provide your analysis! Output as JSON structure as you see fit. The goal is to make is machine readable.
-      It must include the key 'markdown' at the root level with the value being the full text of the observation in Markdown format.
-      This `markdown` field will be used to present the observation to the user; whereas the entire JSON strucure will be used by other AI assistants as input.
 "Worker Four":
-  input: "learning content"
-  output: "lesson plan"
-  task: "Create a lesson plan based on the content"
+  input: "subject"
+  output: "news"
+  task: "Get latest news"
   assistant:
-    name: "Lesson Plan Creator"
+    name: "News getter"
     instruction: |
-      You are a lesson plan creator. You work together with the user - the facilitator - to create a lesson plan based on the content provided.
-      The lesson plan uses the content and adds engaging group activities to enhance learning.
+      Get the latest news on the ubject
+    functions:
+    - name: "web_search_qa"
