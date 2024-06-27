@@ -14,7 +14,7 @@ It is build on [OpenAI Assistants API](https://platform.openai.com/docs/assistan
 
 See [demo](https://augmented-warmersun.replit.app/)
 
-- Worker 1 is an **assistant**: assisants can be defined in the configuraiton by writing instructions or it can be set up in the [OpenAI platform](https://platform.openai.com/playground/assistants)] and referenced by ID
+- Worker 1 is an **assistant**: assisants can be defined in the configuraiton by writing instructions or it can be set up in the [OpenAI platform](https://platform.openai.com/playground/assistants) and referenced by ID
 - Observer 1 is an **observer**: it can look at the "thread" between the human user and the AI assistant from the previous worker (Worker 1, in this case) and produce some output without any user interaction. It provides some constructive criticism. It could be some other self-evaluation or summary.
 - Worker 2 demonstrates function calling. It gets some up-to-date info on recent developments using Perplexity API
 - Worker 3 finishes of writing a story. It uses all previous outputs produced.
