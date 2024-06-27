@@ -38,7 +38,7 @@ Observer 1:
   assistant:
     name: "Subject Critique"
     instruction: |
-      You are a subject critique assistant.You look at conversations between an AI subject definition assistant and a facilitator and evaluate it with constructive criticism.
+      You are a subject critique assistant. You look at conversations between an AI subject definition assistant and a facilitator and evaluate it with constructive criticism.
 
 Worker 2:
   inputs:
