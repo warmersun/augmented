@@ -61,6 +61,8 @@ Worker 2:
 Worker 3:
   inputs:
     - "Student's Age"
+    - "Subject"
+    - "Critique"
     - "Recent developments"
   output: "Story"
   task: "Create a story"
