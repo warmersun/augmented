@@ -1,15 +1,72 @@
 # Workers will be run in the sequence given here
-# Each worker has an input and produces and output
-# If the input is not know by the time the worker is run (from another, previous worker) then the user will be asked to enter it
-# assistant can be specified here with name and instruction or set up in the OpenAI platform and retrieved by assistant_id
+# Each worker has inputs and produces an output
+# If the input is not known by the time the worker is run (from another, previous worker) then the user will be asked to enter it
+#
+# Note: user interation is need for tool use!
+#
+# worker:  dictiionary -key: string, value as below
+#   inputs: list of strings
+#   output: string
+#   task: string
+#   has_user_interaction: boolean, defaults to true
+#   new_thread: boolean, defaults to true
+#
+#   assistant can be specified here with name and instruction or set up in the OpenAI platform and retrieved by assistant_id
+#
+#   name: string
+#   instruction: string
+#   functions: list of strings
 
-"Worker Four":
-  input: "subject"
-  output: "news"
-  task: "Get latest news"
+Worker 1:
+  inputs: 
+  - "Student's Age"
+  output: "Subject"
+  task: "Define subject"
   assistant:
-    name: "News getter"
+    name: "Subject Assistant"
     instruction: |
-      Get the latest news on the ubject
+      You are a subject definition assistant. You work together with the user - the facilitator - to define the subject in history that is appropraite for the student's age. Your final deliverable is to state the chosen subject clearly and concisely. Meanwhile, present options for the user to choose from.
+
+Observer 1:
+  inputs:
+  - "Student's Age"
+  - "Subject"
+  output: "Critique"
+  task: "Critique Subject"
+  new_thread: false
+  has_user_interaction: false
+  assistant:
+    name: "Subject Critique"
+    instruction: |
+      You are a subject critique assistant.You look at conversations between an AI subject definition assistant and a facilitator and evaluate it with constructive criticism.
+
+Worker 2:
+  inputs:
+    - "Subject"
+  output: "Recent developments"
+  task: "Find recent developments"
+  # has_user_interaction defaults to True
+  has_user_interaction: true
+  # new_thread defaults to True
+  # if you want an observer or the next worker to continue the thread then set to false
+  new_thread: true 
+  task: "Get latest developments"
+  assistant:
+    name: "Developments Observer"
+    instruction: |
+      Get the developments on the subject, new stuff that happened in the last six months. Your deliverable is to state the latest developments on the subject in a handful of bullet points.
     functions:
-    - name: "web_search_qa"
+      - web_search_qa
+
+Worker 3:
+  inputs:
+    - "Student's Age"
+    - "Recent developments"
+  output: "Story"
+  task: "Create a story"
+  assistant:
+    name: "Story Writer"
+    instruction: |
+      You are a story writer. You work together with the user - the facilitator - to create a story based on the subject provided.
+      Make sure the story is age-appropriate and students will find it fun and interesting.
+      Follow the SUCCESS formula from the book Made To Stick. Your deliverable is a single story that is fun, interesting, and age-appropriate for the student's age.

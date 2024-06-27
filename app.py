@@ -1,5 +1,6 @@
 import json
 import os
+from typing import Optional
 
 import chainlit as cl
 from openai import AsyncAssistantEventHandler, AsyncOpenAI
@@ -13,11 +14,11 @@ from function_tools import web_search_qa
 
 # event handler for next user message
 
-class EventHandler(AsyncAssistantEventHandler):
+class MessageEventHandler(AsyncAssistantEventHandler):
     def __init__(self, author: str) -> None:
         super().__init__()
         self.author = author
-        self.current_message: cl.Message = None
+        self.current_message: Optional[cl.Message] = None
         self.async_client = AsyncOpenAI(
           api_key=os.environ['OPENAI_API_KEY'],
         )
@@ -39,7 +40,8 @@ class EventHandler(AsyncAssistantEventHandler):
 
     @override
     async def on_text_delta(self, delta: TextDelta, snapshot: Text) -> None:
-         await self.current_message.stream_token(delta.value or "")
+        assert self.current_message is not None, "current_message should be set before on_text_delta"
+        await self.current_message.stream_token(delta.value or "")
 
     @override
     async def on_text_done(self, text: Text) -> None:
@@ -79,7 +81,7 @@ class EventHandler(AsyncAssistantEventHandler):
         thread_id=self.current_run.thread_id,
         run_id=self.current_run.id,
         tool_outputs=tool_outputs,
-        event_handler=EventHandler(self.author),
+        event_handler=MessageEventHandler(self.author),
       ) as stream:
         await stream.until_done()
 
@@ -129,15 +131,19 @@ async def start():
     await task_running(worker.task)
     
     # the AI starts
-    await worker.get_next_assistant_message(EventHandler(worker.assistant.name))
+    assert worker is not None, "worker should be set before calling start"
+    assert worker.assistant is not None, "worker.assistant should be set before calling start"
+    assert worker.assistant.name is not None, "worker.assistant.name should be set before calling start"
+    if worker.has_user_interaction:
+        await worker.get_next_assistant_message(MessageEventHandler(worker.assistant.name))
+    else:
+        await get_output()
 
 @cl.on_stop
 async def on_stop():
     # cancel-run is safe to call, even if the run is not running
     worker = cl.user_session.get("worker")
     await worker.cancel_run() if worker else None
-    observer = cl.user_session.get("observer")
-    await observer.cancel_run() if observer else None   
 
 @cl.on_message
 async def main(message: cl.Message):
@@ -154,13 +160,38 @@ async def main(message: cl.Message):
     worker = cl.user_session.get("worker")
     if worker is not None:
         # let the worker know about the message
-        worker.submit_user_message(message.content)
-        #  check if this message means that the user has finished and the job is completed
-        if worker.is_finished():
-            await get_output()
-        else:
-            await worker.get_next_assistant_message(EventHandler(worker.assistant.name))    
+        await worker.submit_user_message(message.content)
+        await worker.get_next_assistant_message(MessageEventHandler(worker.assistant.name))    
 
+async def save_output_and_start_next_worker() -> None:
+    worker = cl.user_session.get("worker")
+    assert worker is not None, "worker should be set before calling save_output_and_start_next_worker"
+    
+    teamlead = cl.user_session.get("teamlead")
+    assert teamlead is not None, "teamlead should be set"
+    teamlead.save_output()
+    
+    await task_done(worker.task)
+    
+    # get the next worker
+    worker = await teamlead.get_next_worker()
+    if worker is not None:
+        await task_running(worker.task)
+        cl.user_session.set("worker", worker)
+        # the AI starts for the next worker
+        if worker.has_user_interaction:
+            await worker.get_next_assistant_message(MessageEventHandler(worker.assistant.name))
+        else:
+            await get_output()
+    else:
+        # no more workers
+        await cl.Message(content="All done!").send()
+        task_list = cl.user_session.get("task_list")
+        assert task_list is not None, "task_list should be set"
+        task_list.status = "Done"
+        await task_list.update()
+
+        
 async def get_output():
     # get the worker from the user session
     worker = cl.user_session.get("worker")
@@ -176,37 +207,48 @@ async def get_output():
         try:
             output_parsed = json.loads(output)
             markdown = output_parsed.get("markdown", "No output generated")
-            
-            actions = [
-                # confirm
-                cl.Action(
-                    name='confirm_output', 
-                    value="confirm", 
-                    label="Confirm", 
-                    description="Confirm the output is good to go."
-                ),
-                # cancel
-                cl.Action(
-                    name='confirm_output', 
-                    value="needs_more_work", 
-                    label="Needs more work...", 
-                    description="Need to keep working on the output."
-                )
-            ]
-            cl.user_session.set("actions", actions)
+
             elements = [
                 cl.Text(name="markdown", content=markdown, display="inline"),
-                cl.Text(name="output", content=output, display="side", language="javascript")
+                cl.Text(name="output", content=json.dumps(output_parsed, indent=4), display="side", language="javascript")
             ]
-        
-            msg.content ="Confirm the output is good to go!"
-            msg.actions=actions
+
+            if worker.has_user_interaction:
+            # ask the user to confirm the output            
+                actions = [
+                    # confirm
+                    cl.Action(
+                        name='confirm_output', 
+                        value="confirm", 
+                        label="Confirm", 
+                        description="Confirm the output is good to go."
+                    ),
+                    # cancel
+                    cl.Action(
+                        name='confirm_output', 
+                        value="needs_more_work", 
+                        label="Needs more work...", 
+                        description="Need to keep working on the output."
+                    )
+                ]
+                cl.user_session.set("actions", actions)      
+                msg.content ="Confirm the output is good to go!"
+                msg.actions=actions
+            else:
+                msg.content ="Generated output:"
+            # it always includes the elements: the markdown and the full output                
             msg.elements=elements
             await msg.update()
+
+            if not worker.has_user_interaction:
+                # the output is good to go
+                await save_output_and_start_next_worker()
+
         except json.JSONDecodeError as e:
             msg.content = "Something went wrong with the output. Please try again."
             await msg.update()
-                
+
+    
 @cl.action_callback("confirm_output")
 async def confirm_output(action: cl.Action):
     # after the user or the AI has decided that the job is complete the AI generated the output and presented it for the user.
@@ -218,54 +260,14 @@ async def confirm_output(action: cl.Action):
     if worker is not None:
         # let the worker know 
         if action.value == "confirm":              
-            # TODO: do we need this?
-            worker.output_is_good_to_go()
-
-            teamlead = cl.user_session.get("teamlead")
-            teamlead.save_output()
-            
-            # check if the worker has an observer
-            observer = teamlead.get_observer()
-
-            if observer is not None:
-                cl.user_session.set("observer", observer)
-                output = await observer.observe(OutputEventHandler(observer.assistant.name))
-                try:
-                    output_parsed = json.loads(output)
-                    markdown = output_parsed.get("markdown", "No output generated")
-    
-                    await cl.Message(
-                        content="Observation: ", 
-                        elements = [
-                            cl.Text(name="markdown", content=markdown, display="inline"),
-                            cl.Text(name="output", content=output, display="side", language="javascript")
-                        ]
-                    ).send()
-                except json.JSONDecodeError as e:
-                    await cl.Message(content="Something went wrong with the output. Please try again.").send()
-    
-            await task_done(worker.task)
-
-            # get the next worker
-            worker = await teamlead.get_next_worker()
-            if worker is not None:
-                await task_running(worker.task)
-                cl.user_session.set("worker", worker)
-                # the AI starts for the next worker
-                await worker.get_next_assistant_message(EventHandler(worker.assistant.name))
-            else:
-                # no more workers
-                await cl.Message(content="All done!").send()
-                task_list = cl.user_session.get("task_list")
-                task_list.status = "Done"
-                await task_list.update()
+            await save_output_and_start_next_worker()
                                 
         else:        
             feedback = await cl.AskUserMessage(content="Please provide your feedback on the generated output!", timeout=30).send()
             feedback_str = feedback.get('output', 'Needs more work!') if feedback else 'Needs more work.'
             worker.output_needs_work(feedback_str)
             # we ask the worker to continue and return the next AI message to show
-            await worker.get_next_assistant_message(EventHandler(worker.assistant.name))
+            await worker.get_next_assistant_message(MessageEventHandler(worker.assistant.name))
             
         # remove the action buttons from the UI
         actions = cl.user_session.get("actions")
@@ -279,7 +281,6 @@ async def confirm_output(action: cl.Action):
 async def finish(action: cl.Action):
     worker = cl.user_session.get("worker")
     if worker is not None and action.value == "finish":
-        worker.finish()
         await get_output()
 
     await action.remove()
@@ -296,7 +297,7 @@ async def show_task_list() -> None:
     tasks = {}
     cl.user_session.set("task_list", task_list)
     for worker_name, worker_config in teamlead.config.items():
-        task = cl.Task(title=f"{worker_config['task']}")
+        task = cl.Task(title=f"{worker_name}: {worker_config['task']}")
         tasks[worker_config['task']] = task
         await task_list.add_task(task)
 
