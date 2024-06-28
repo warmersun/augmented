@@ -127,8 +127,10 @@ async def start():
     await show_task_list()
 
     worker = await teamlead.get_next_worker()
+    assert worker is not None, "No worker found"
     cl.user_session.set("worker",worker)
-    await task_running(worker.task)
+    if worker.task:
+        await task_running(worker.task)
     
     # the AI starts
     assert worker is not None, "worker should be set before calling start"
@@ -170,13 +172,15 @@ async def save_output_and_start_next_worker() -> None:
     teamlead = cl.user_session.get("teamlead")
     assert teamlead is not None, "teamlead should be set"
     teamlead.save_output()
-    
-    await task_done(worker.task)
+
+    if worker.task is not None:
+        await task_done(worker.task)
     
     # get the next worker
     worker = await teamlead.get_next_worker()
     if worker is not None:
-        await task_running(worker.task)
+        if worker.task is not None:
+            await task_running(worker.task)
         cl.user_session.set("worker", worker)
         # the AI starts for the next worker
         if worker.has_user_interaction:
@@ -297,12 +301,13 @@ async def show_task_list() -> None:
     tasks = {}
     cl.user_session.set("task_list", task_list)
     for worker_name, worker_config in teamlead.config.items():
-        task = cl.Task(title=f"{worker_name}: {worker_config['task']}")
-        tasks[worker_config['task']] = task
-        await task_list.add_task(task)
-
-    cl.user_session.set("tasks", tasks)
-    await task_list.send()
+        if worker_config.get("task") is not None:
+            task = cl.Task(title=f"{worker_name}: {worker_config['task']}")
+            tasks[worker_config['task']] = task
+            await task_list.add_task(task)
+    if tasks:
+        cl.user_session.set("tasks", tasks)
+        await task_list.send()
 
 async def task_running(task_desc: str) -> None:
     task_list = cl.user_session.get("task_list")

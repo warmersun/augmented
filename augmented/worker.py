@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 from openai import AsyncAssistantEventHandler, AsyncOpenAI, NotGiven, OpenAI
 from openai.types.beta import Assistant, Thread
@@ -7,7 +8,7 @@ from augmented.util import json_mode_instruction_ending
 
 
 class Worker:
-  def __init__(self, name: str, task_desc: str, assistant: Assistant, inputs: list[tuple[str, str]], thread: Thread, has_user_interaction=True ) -> None:
+  def __init__(self, name: str, task_desc: Optional[str], assistant: Assistant, inputs: list[tuple[str, str]], thread: Thread, has_user_interaction=True ) -> None:
     self.async_client = AsyncOpenAI(
       api_key=os.environ['OPENAI_API_KEY'],
     )

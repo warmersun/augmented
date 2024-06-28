@@ -32,7 +32,7 @@ Observer 1:
   - "Student's Age"
   - "Subject"
   output: "Critique"
-  task: "Critique Subject"
+#  task: "Critique Subject"
   new_thread: false
   has_user_interaction: false
   assistant:

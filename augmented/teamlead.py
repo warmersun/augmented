@@ -71,7 +71,7 @@ class TeamLead:
         # pass it in to the worker
         self._worker = Worker(
           name = worker_name,
-          task_desc=worker_config['task'],
+          task_desc=worker_config.get('task'),
           assistant=assistant,
           inputs=inputs,
           thread= self.thread,
