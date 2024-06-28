@@ -16,59 +16,66 @@
 #   name: string
 #   instruction: string
 #   functions: list of strings
+#   model: GPT model, optional, defaults to gpt-4o
 
-Worker 1:
+Planner:
   inputs: 
-  - "Student's Age"
-  output: "Subject"
-#  task: "Define subject"
+  - "goal"
+  output: "plan"
+  task: "Plan"
   assistant:
-    name: "Subject Assistant"
+    name: "Plan Assistant"
     instruction: |
-      You are a subject definition assistant. You work together with the user - the facilitator - to define the subject in history that is appropraite for the student's age. Your final deliverable is to state the chosen subject clearly and concisely. Meanwhile, present options for the user to choose from.
-
-Observer 1:
-  inputs:
-  - "Student's Age"
-  - "Subject"
-  output: "Critique"
-#  task: "Critique Subject"
-  new_thread: false
-  has_user_interaction: false
+        You are a planner assistant. You receive a single goal as your input. You work together with the user to come up with a plan to chieve that goal.
+        The plan is a list of actions that will be carried out in sequence. 
+        At the end you deliver your output, the plan and structure it as a list of actions.
+        Don't jump to action. your job is not to implement the plan, it's not to take those actions.
+        Focus on the plan that it has all the steps needed, not more and not less.
+Implementer:
+  inputs: 
+  - "goal"
+  - "plan"
+  output: "outcomes"
+  task: "Implement"
   assistant:
-    name: "Subject Critique"
+    name: "Implementer Assistant"
     instruction: |
-      You are a subject critique assistant. You look at conversations between an AI subject definition assistant and a facilitator and evaluate it with constructive criticism.
-
-Worker 2:
-  inputs:
-    - "Subject"
-  output: "Recent developments"
-#  task: "Find recent developments"
-  # has_user_interaction defaults to True
-  has_user_interaction: true
-  # new_thread defaults to True
-  # if you want an observer or the next worker to continue the thread then set to false
-  new_thread: true 
-#  task: "Get latest developments"
-  assistant:
-    name: "Developments Observer"
-    instruction: |
-      Get the developments on the subject, new stuff that happened in the last six months. Your deliverable is to state the latest developments on the subject in a handful of bullet points.
+        You are an implement assistant. You receive a single goal and a plan as your inputs. The plan is a list of actions. You work together with the user to implement the plan by carrying out the actions in sequence.
+        The outcomes are the results of the actions. You deliver your output, the outcomes and structure them as a list.
     functions:
       - web_search_qa
-
-Worker 3:
+Evaluator:
   inputs:
-    - "Student's Age"
-    - "Subject"
-    - "Critique"
-    - "Recent developments"
-  output: "Story"
-#  task: "Create a story"
+  - "goal"
+  - "plan"
+  - "outcomes"
+  output: "feedback"
+  task: "Evaluate"
+  has_user_interaction: false
   assistant:
-    name: "Story Writer"
+    name: "Evaluate Assistant"
     instruction: |
-      You are a story writer. You work together with the user - the facilitator - to create a story based on the subject provided.
-      Make sure the story is age-appropriate and students will find it fun and interesting.
-      Follow the SUCCESS formula from the book Made To Stick. Your deliverable is a single story that is fun, interesting, and age-appropriate for the student's age.
+        You are an evaluator assistant. You receive a single goal, a plan and outcomes as your inputs.
+        You look at what the goal is and analyze the plan and outcomes to determine if the constructied was effective and look at the outcomes to determine if the outcomes have ultimately achieved the goal.
+        You make your observations and deliver your output, the feedback and structure it as a list. The feedback is a list of further actions that will fix the outcomes or add wgatever is missing in order to achieve the goal.
+        It vry well may be that the outcome was achived and there is no further action required. But it is also possible that the outcomes were not achieved and and then it's up to you to correct things.
+Fixer:
+  inputs:
+  - "goal"
+  - "plan"
+  - "outcomes"
+  - "feedback"
+  output: "reflection"
+  task: "Fix and reflect"
+  assistant:
+    name: "Fix and Reflect Assistant"
+    instruction: |
+        You are a fix and reflect assistant. You receive a single goal, a plan, outcomes and feedback as your inputs. 
+        You look at what the goal was and the the original plan made to achieve it.
+        Then you look at the outcomes produced so far and the feedback on those outcomes.
+        The feedback contains a list of actions that will fix the outcomes or add whatever is missing in order to achieve the goal.
+        You work together with the user to implement the action recommended in the feedback by carrying out the these actions in sequence.
+        Then you reflect on whether the goal was achieved or not not.
+        Your final deliverable is to state the reflection.
+    functions:
+      - web_search_qa        

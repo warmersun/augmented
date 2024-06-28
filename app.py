@@ -34,7 +34,7 @@ class MessageEventHandler(AsyncAssistantEventHandler):
         self.current_message = await cl.Message(author=self.author, content="").send()
         # remember the new Finish button
         finish_actions =  [
-            cl.Action(name="finish", value="finish", label="Finished", description="Indicate that the work is finished and the AI should now generate the output")
+            cl.Action(name="finish", value="finish", label="👍 Finished", description="Indicate that the work is finished and the AI should now generate the output")
         ]
         cl.user_session.set("finish_actions", finish_actions)
 
@@ -45,6 +45,7 @@ class MessageEventHandler(AsyncAssistantEventHandler):
 
     @override
     async def on_text_done(self, text: Text) -> None:
+        assert self.current_message is not None, "current_message should be set before on_text_done"
         # display a Finish button
         finish_actions = cl.user_session.get("finish_actions")
         if finish_actions:
@@ -66,24 +67,24 @@ class MessageEventHandler(AsyncAssistantEventHandler):
             await self.handle_requires_action(event.data, run_id)
 
     async def handle_requires_action(self, data, run_id):
-      tool_outputs = []
-
-      for tool in data.required_action.submit_tool_outputs.tool_calls:
-        if tool.function.name == "web_search_qa":
-            arguments = json.loads(tool.function.arguments)
-            tool_outputs.append({"tool_call_id": tool.id, "output": await web_search_qa(arguments['question'])})
+        tool_outputs = []
+        for tool in data.required_action.submit_tool_outputs.tool_calls:
+            if tool.function.name == "web_search_qa":
+                arguments = json.loads(tool.function.arguments)
+                tool_outputs.append({"tool_call_id": tool.id, "output": await web_search_qa(arguments['question'])})
         # Submit all tool_outputs at the same time
         await self.submit_tool_outputs(tool_outputs, run_id)
 
     async def submit_tool_outputs(self, tool_outputs, run_id):
-      # Use the submit_tool_outputs_stream helper
-      async with self.async_client.beta.threads.runs.submit_tool_outputs_stream(
-        thread_id=self.current_run.thread_id,
-        run_id=self.current_run.id,
-        tool_outputs=tool_outputs,
-        event_handler=MessageEventHandler(self.author),
-      ) as stream:
-        await stream.until_done()
+        # Use the submit_tool_outputs_stream helper
+        assert self.current_run is not None, "self.current_run should be set before calling submit_tool_outputs"
+        async with self.async_client.beta.threads.runs.submit_tool_outputs_stream(
+            thread_id=self.current_run.thread_id,
+            run_id=self.current_run.id,
+            tool_outputs=tool_outputs,
+            event_handler=MessageEventHandler(self.author),
+        ) as stream:
+            await stream.until_done()
 
 async def ask_user_for_input(input_name: str) -> str:
     input_ask = await cl.AskUserMessage(content=f"Please provide the input {input_name}!", timeout=60).send()
@@ -224,14 +225,14 @@ async def get_output():
                     cl.Action(
                         name='confirm_output', 
                         value="confirm", 
-                        label="Confirm", 
+                        label="✅ Confirm", 
                         description="Confirm the output is good to go."
                     ),
                     # cancel
                     cl.Action(
                         name='confirm_output', 
                         value="needs_more_work", 
-                        label="Needs more work...", 
+                        label="🛠 Needs more work...", 
                         description="Need to keep working on the output."
                     )
                 ]
@@ -301,7 +302,11 @@ async def show_task_list() -> None:
     tasks = {}
     for worker_name, worker_config in teamlead.config.items():
         if worker_config.get("task") is not None:
-            task = cl.Task(title=f"{worker_name}: {worker_config['task']}")
+            if worker_config.get('has_user_interaction', True):
+                icon  = "👩‍🏭"
+            else:
+                icon = "🤖"
+            task = cl.Task(title=f"{icon} {worker_name}: {worker_config['task']}")
             tasks[worker_config['task']] = task
             await task_list.add_task(task)
     if tasks:

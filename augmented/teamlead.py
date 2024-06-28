@@ -59,8 +59,7 @@ class TeamLead:
           assistant = await self.async_client.beta.assistants.create(
             name= worker_config['assistant']['name'],
             instructions=worker_config['assistant']['instruction'],
-            # model="gpt-4o",
-            model = "gpt-3.5-turbo",
+            model=worker_config['assistant'].get('model','gpt-4o'),
             tools = tool_functions
           )
         # Let's deal with the thread. Normally, workers will start a new thread...
