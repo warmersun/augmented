@@ -191,9 +191,9 @@ async def save_output_and_start_next_worker() -> None:
         # no more workers
         await cl.Message(content="All done!").send()
         task_list = cl.user_session.get("task_list")
-        assert task_list is not None, "task_list should be set"
-        task_list.status = "Done"
-        await task_list.update()
+        if task_list:
+            task_list.status = "Done"
+            await task_list.update()
 
         
 async def get_output():
@@ -299,7 +299,6 @@ async def show_task_list() -> None:
     task_list = cl.TaskList()
     task_list.status = "Running..."
     tasks = {}
-    cl.user_session.set("task_list", task_list)
     for worker_name, worker_config in teamlead.config.items():
         if worker_config.get("task") is not None:
             task = cl.Task(title=f"{worker_name}: {worker_config['task']}")
@@ -308,6 +307,7 @@ async def show_task_list() -> None:
     if tasks:
         cl.user_session.set("tasks", tasks)
         await task_list.send()
+        cl.user_session.set("task_list", task_list)
 
 async def task_running(task_desc: str) -> None:
     task_list = cl.user_session.get("task_list")

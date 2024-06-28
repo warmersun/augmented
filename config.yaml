@@ -21,7 +21,7 @@ Worker 1:
   inputs: 
   - "Student's Age"
   output: "Subject"
-  task: "Define subject"
+#  task: "Define subject"
   assistant:
     name: "Subject Assistant"
     instruction: |
@@ -44,13 +44,13 @@ Worker 2:
   inputs:
     - "Subject"
   output: "Recent developments"
-  task: "Find recent developments"
+#  task: "Find recent developments"
   # has_user_interaction defaults to True
   has_user_interaction: true
   # new_thread defaults to True
   # if you want an observer or the next worker to continue the thread then set to false
   new_thread: true 
-  task: "Get latest developments"
+#  task: "Get latest developments"
   assistant:
     name: "Developments Observer"
     instruction: |
@@ -65,7 +65,7 @@ Worker 3:
     - "Critique"
     - "Recent developments"
   output: "Story"
-  task: "Create a story"
+#  task: "Create a story"
   assistant:
     name: "Story Writer"
     instruction: |
