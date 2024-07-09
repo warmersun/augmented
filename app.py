@@ -30,7 +30,10 @@ class WorkerMessageEventHandler(AsyncAssistantEventHandler):
             for previous_finish_action in previous_finish_actions:
                 await previous_finish_action.remove()
 
-        self.current_message = await cl.Message(author="Worker",
+        worker = cl.user_session.get("worker")
+        assert worker is not None, "Worker not found in session."
+        assert worker.assistant is not None, "Worker assistant not found in session." 
+        self.current_message = await cl.Message(author=worker.assistant.name,
                                                 content="").send()
         # remember the new Finish button
         finish_actions = [
@@ -99,7 +102,11 @@ class WorkerMessageEventHandler(AsyncAssistantEventHandler):
 
 
 async def ask_user_for_input(input_name: str) -> str:
+    worker = cl.user_session.get("worker")
+    assert worker is not None, "Worker not found in session."
+    assert worker.assistant is not None, "Worker assistant not found in session."
     input_ask = await cl.AskUserMessage(
+        author=worker.assistant.name,
         content=f"Please provide the input {input_name}!", timeout=60).send()
     input = input_ask.get(
         'output', 'No input provided') if input_ask else 'No input provided'
@@ -121,13 +128,15 @@ class WorkerOutputEventHandler(AsyncAssistantEventHandler):
 
     def __init__(self) -> None:
         super().__init__()
-        self.author = "Worker"
         self.current_message: Optional[cl.Message] = None
 
     @override
     async def on_text_created(self, text: Text) -> None:
+        worker = cl.user_session.get("worker")
+        assert worker is not None, "Worker not found in session."
+        assert worker.assistant is not None, "Worker assistant not found in session." 
         self.current_message = await cl.Message(
-            author=self.author, content="Generating output...\n```").send()
+            author=worker.assistant.name, content="Generating output...\n```").send()
 
     @override
     async def on_text_delta(self, delta: TextDelta, snapshot: Text) -> None:
@@ -147,7 +156,7 @@ class PlannerMessageEventHandler(AsyncAssistantEventHandler):
 
     def __init__(self) -> None:
         super().__init__()
-        self.author = "Planner"
+        self.author = "planner"
         self.current_message: Optional[cl.Message] = None
         self.async_client = AsyncOpenAI(api_key=os.environ['OPENAI_API_KEY'], )
 
@@ -195,6 +204,7 @@ class PlannerMessageEventHandler(AsyncAssistantEventHandler):
             elif tool.function.name == "choose_next_worker":
                 arguments = json.loads(tool.function.arguments)
                 res = await cl.AskActionMessage(
+                    author=self.author,
                     content=f"Use the {arguments['worker_name']} worker?",
                     actions=[
                         cl.Action(name="continue", value="ok", label="✅ OK"),
@@ -379,6 +389,7 @@ async def confirm_output(action: cl.Action):
 
         else:
             feedback = await cl.AskUserMessage(
+                author=worker.assistant.name,
                 content="Please provide your feedback on the generated output!",
                 timeout=30).send()
             feedback_str = feedback.get(
