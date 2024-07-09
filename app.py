@@ -311,6 +311,8 @@ async def save_output_and_continue_planner() -> None:
     teamlead.save_output()
     planner = cl.user_session.get("planner")
     assert planner is not None, "planner should be set"
+    # note: this message is not displayed on the UI
+    await planner.submit_user_message(f"I have just finished using the {worker.name} worker and produced the {worker.output_name} deliverable output.")
     cl.user_session.set("current_team_member", planner)
     await planner.get_next_assistant_message()
 
