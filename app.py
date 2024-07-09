@@ -209,8 +209,9 @@ class PlannerMessageEventHandler(AsyncAssistantEventHandler):
                                   value="cancel",
                                   label="❌ Cancel"),
                     ],
+                    timeout=5
                 ).send()
-                if res and res.get("value") == "ok":
+                if res is None or res.get("value") == "ok":
                     teamlead = cl.user_session.get("teamlead")
                     assert teamlead is not None, "teamlead should be set"
                     worker = await teamlead.get_worker(
