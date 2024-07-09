@@ -13,4 +13,41 @@ web_search_qa: |
       "required": ["question"]
     }
   }
-  
+
+get_document: |
+  {
+    "name": "get_document",
+    "description": "Get the full text of a document that has already been produced by a worker. Documents are in JSON format an contain a human readable text in Mardown format in the `markdown` field.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "document_name": {
+          "type": "string", 
+          "description": "The name of the document to be retrieved."
+        }
+      },
+      "required": ["document_name"]
+    }
+  }  
+
+list_all_procuded_documents: |
+  {
+    "name": "list_all_procuded_documents",
+    "description": "List all the documents that have been produced by a worker."
+  }
+
+choose_next_worker: |
+  {
+    "name": "choose_next_worker",
+    "description": "Select which worker should be used next. It will then be started, given all all the inputs and it will be used to produce its output",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "worker_name": {
+          "type": "string",
+          "description": "The name of the worker to be used next."
+        }
+      },
+      "required": ["worker_name"]
+    }
+  }

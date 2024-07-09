@@ -81,13 +81,13 @@ files = [
 
 [[package]]
 name = "chainlit"
-version = "1.1.301"
+version = "1.1.306"
 description = "Build Conversational AI."
 optional = false
 python-versions = "<4.0.0,>=3.8.1"
 files = [
-    {file = "chainlit-1.1.301-py3-none-any.whl", hash = "sha256:d404974c42caf4216a290b82aab4dddfb5c535164c5974e0a207352196fd7cde"},
-    {file = "chainlit-1.1.301.tar.gz", hash = "sha256:c577d405ab00cffb4b4d32976c13cf16095fb89e0bb9e8059c2d3d070b1a20d9"},
+    {file = "chainlit-1.1.306-py3-none-any.whl", hash = "sha256:1ff4f2f31314866e5a9029377414527170842e9e9ff12ee976ea25268c893f7b"},
+    {file = "chainlit-1.1.306.tar.gz", hash = "sha256:d13be4806eb12f8d4d5c5b4f51070dffeb8758a0079d8ecd80725fbaef0915fa"},
 ]
 
 [package.dependencies]
@@ -99,7 +99,7 @@ fastapi = ">=0.110.1,<0.111.0"
 filetype = ">=1.2.0,<2.0.0"
 httpx = ">=0.23.0"
 lazify = ">=0.4.0,<0.5.0"
-literalai = "0.0.604"
+literalai = "0.0.607"
 nest-asyncio = ">=1.5.6,<2.0.0"
 numpy = {version = ">=1.26,<2.0", markers = "python_version >= \"3.9\""}
 packaging = ">=23.1,<24.0"
@@ -511,12 +511,12 @@ files = [
 
 [[package]]
 name = "literalai"
-version = "0.0.604"
+version = "0.0.607"
 description = "An SDK for observability in Python applications"
 optional = false
 python-versions = "*"
 files = [
-    {file = "literalai-0.0.604.tar.gz", hash = "sha256:6f6cce12bb968d9653a9d8adc4d0472be1315d0dccbb2647c972a68f620b3281"},
+    {file = "literalai-0.0.607.tar.gz", hash = "sha256:783c495d9fb2ae9f84e5877ecb34587f6a6ac0224d9f0936336dbc8b6765b30d"},
 ]
 
 [package.dependencies]
@@ -1409,4 +1409,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10.0,<3.12"
-content-hash = "660f72cc0940c8b6c17bde6645e0695332f56ccdf081b858d8f88f5ee638e928"
+content-hash = "332e9f010f3659d221e9f5035c8ea327f493e569299379b8933acc94edf4ba02"

@@ -2,9 +2,9 @@
 # Each worker has inputs and produces an output
 # If the input is not known by the time the worker is run (from another, previous worker) then the user will be asked to enter it
 #
-# Note: user interation is need for tool use!
+# Note: user interaction is needed for tool use!
 #
-# worker:  dictiionary -key: string, value as below
+# worker: dictionary - key: string, value as below
 #   inputs: list of strings
 #   output: string
 #   task: string
@@ -16,66 +16,70 @@
 #   name: string
 #   instruction: string
 #   functions: list of strings
-#   model: GPT model, optional, defaults to gpt-4o
-
-Planner:
-  inputs: 
-  - "goal"
-  output: "plan"
-  task: "Plan"
+#   model: GPT model, optional, defaults to gpt-4
+#
+# Note: It is advisable to create assistants via the platform dashboard because
+#       all assistants created via the API will show and remain there until manually deleted!
+#
+# There has to be a worker that is called "Planner"
+#
+planner:
   assistant:
-    name: "Plan Assistant"
+    name: DecisionMaker
     instruction: |
-        You are a planner assistant. You receive a single goal as your input. You work together with the user to come up with a plan to chieve that goal.
-        The plan is a list of actions that will be carried out in sequence. 
-        At the end you deliver your output, the plan and structure it as a list of actions.
-        Don't jump to action. your job is not to implement the plan, it's not to take those actions.
-        Focus on the plan that it has all the steps needed, not more and not less.
-Implementer:
-  inputs: 
-  - "goal"
-  - "plan"
-  output: "outcomes"
-  task: "Implement"
-  assistant:
-    name: "Implementer Assistant"
-    instruction: |
-        You are an implement assistant. You receive a single goal and a plan as your inputs. The plan is a list of actions. You work together with the user to implement the plan by carrying out the actions in sequence.
-        The outcomes are the results of the actions. You deliver your output, the outcomes and structure them as a list.
-    functions:
-      - web_search_qa
-Evaluator:
-  inputs:
-  - "goal"
-  - "plan"
-  - "outcomes"
-  output: "feedback"
-  task: "Evaluate"
-  has_user_interaction: false
-  assistant:
-    name: "Evaluate Assistant"
-    instruction: |
-        You are an evaluator assistant. You receive a single goal, a plan and outcomes as your inputs.
-        You look at what the goal is and analyze the plan and outcomes to determine if the constructied was effective and look at the outcomes to determine if the outcomes have ultimately achieved the goal.
-        You make your observations and deliver your output, the feedback and structure it as a list. The feedback is a list of further actions that will fix the outcomes or add wgatever is missing in order to achieve the goal.
-        It vry well may be that the outcome was achived and there is no further action required. But it is also possible that the outcomes were not achieved and and then it's up to you to correct things.
-Fixer:
-  inputs:
-  - "goal"
-  - "plan"
-  - "outcomes"
-  - "feedback"
-  output: "reflection"
-  task: "Fix and reflect"
-  assistant:
-    name: "Fix and Reflect Assistant"
-    instruction: |
-        You are a fix and reflect assistant. You receive a single goal, a plan, outcomes and feedback as your inputs. 
-        You look at what the goal was and the the original plan made to achieve it.
-        Then you look at the outcomes produced so far and the feedback on those outcomes.
-        The feedback contains a list of actions that will fix the outcomes or add whatever is missing in order to achieve the goal.
-        You work together with the user to implement the action recommended in the feedback by carrying out the these actions in sequence.
-        Then you reflect on whether the goal was achieved or not not.
-        Your final deliverable is to state the reflection.
-    functions:
-      - web_search_qa        
+      You are a helpful assistant that decides on the best next action to take in a given situation. 
+      You are handed a graph that describes various workers. Each worker takes some inputs and produces and output.
+      Both inputs and outputs are documents. They are JSON format and they always contain a `markdown` field with human readable text in Markdown format.
+      You can assume that the user is familiar with the contents of all documents; you do not need to show them. The `get_document` tool is for your convenience.
+      The output of one worker becomes the input of the next worker.
+      You have tools to ask for a list of all documents produced so far and you can also look at the details of a specific document.
+      When a worker is used and one of its inputs is not yet avaialble, the worker will handle it and ask the user to enter it; but generally, aim to have all inputs available before the worker is used.
+      NEVER ask the user to enter value for any document
+      NEVER ask the user to enter value for any input
+      Your job is to decide - collaboratively with the user - which worker should be used next. Once you decided, use your `choose_next_worker` tool.
+    functions: 
+    - get_document
+    - list_all_procuded_documents
+    - choose_next_worker
+workers:
+  Planner:
+    inputs: 
+      - "goal"
+    output: "plan"
+    task: "Plan"
+    assistant:
+      id: asst_2mHBz1buvQOIy5oK0wqCHHrh
+      # to edit: https://platform.openai.com/assistants/asst_2mHBz1buvQOIy5oK0wqCHHrh
+  Implementer:
+    inputs: 
+      - "goal"
+      - "plan"
+    output: "outcomes"
+    task: "Implement"
+    assistant:
+      id: asst_VC7inEwBBi0mdz02HeJojGb1
+      # to edit: https://platform.openai.com/assistants/asst_VC7inEwBBi0mdz02HeJojGb1
+  Evaluator:
+    inputs:
+      - "goal"
+      - "plan"
+      - "outcomes"
+    output: "feedback"
+    task: "Evaluate"
+    has_user_interaction: false
+    assistant:
+      id: asst_TbhTXb8yN4uEBUSMETQvn3Fa
+      # to edit: https://platform.openai.com/assistants/asst_TbhTXb8yN4uEBUSMETQvn3Fa
+  Fixer:
+    inputs:
+      - "goal"
+      - "plan"
+      - "outcomes"
+      - "feedback"
+    output: "reflection"
+    task: "Fix and reflect"
+    assistant:
+      id: asst_DGaMd7sDXPMcXuRaA2f6K42X
+      # to edit: https://platform.openai.com/assistants/asst_DGaMd7sDXPMcXuRaA2f6K42X
+      functions:
+        - web_search_qa
