@@ -48,7 +48,7 @@ class TeamLead:
     self.planner_thread = None
     self._current_worker_name = None
     self._ids_of_assistants_created = []
-    
+
   async def _get_assistant(self, assistant_config: dict) -> Assistant:
     # now we can construct the worker
     # assume it does not exist. If it did we overwrite it
