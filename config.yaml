@@ -4,14 +4,18 @@
 #
 # Note: user interaction is needed for tool use!
 #
+# planner:
+#   assistant: (see below)
+#
 # worker: dictionary - key: string, value as below
 #   inputs: list of strings
 #   output: string
 #   task: string
 #   has_user_interaction: boolean, defaults to true
 #   new_thread: boolean, defaults to true
+#   assistant: (see below)
 #
-#   assistant can be specified here with name and instruction or set up in the OpenAI platform and retrieved by assistant_id
+#   assistant can be specified here with name and instruction or set up in the OpenAI platform and retrieved by the assistant's id
 #
 #   name: string
 #   instruction: string
@@ -25,62 +29,27 @@
 #
 planner:
   assistant:
-    name: DecisionMaker
-    instruction: |
-      You are a helpful assistant that decides on the best next action to take in a given situation. 
-      You are handed a graph that describes various workers. Each worker takes some inputs and produces and output.
-      Both inputs and outputs are documents. They are JSON format and they always contain a `markdown` field with human readable text in Markdown format.
-      The output of one worker becomes the input of the next worker.
-      You have tools to ask for a list of all documents produced so far and you can also look at the details of a specific document.
-      You can assume that the user is familiar with the contents of all documents; you do not need to show them. The `get_document` tool is for your convenience.
-      You should always use the `list_all_procuded_documents` tool to get a list of all documents produced so far.
-      When a worker starts and some of its inputs is not yet avaialble, the worker will handle it and ask the user to enter the missing inputs; but generally, your should aim to have all inputs available before a worker is used.
-      NEVER ask the user to enter value for any document
-      NEVER ask the user to enter value for any input
-      Your job is to decide - collaboratively with the user - which worker should be used next. Once you decided, use your `choose_next_worker` tool.
-    functions: 
-    - get_document
-    - list_all_procuded_documents
-    - choose_next_worker
+    id: asst_CM4NRyhejmZuruJUdqydY2g2
+    # to edit: https://platform.openai.com/assistants/asst_CM4NRyhejmZuruJUdqydY2g2
 workers:
-  Planner:
-    inputs: 
-      - "goal"
-    output: "plan"
-    task: "Plan"
-    assistant:
-      id: asst_2mHBz1buvQOIy5oK0wqCHHrh
-      # to edit: https://platform.openai.com/assistants/asst_2mHBz1buvQOIy5oK0wqCHHrh
-  Implementer:
-    inputs: 
-      - "goal"
-      - "plan"
-    output: "outcomes"
-    task: "Implement"
-    assistant:
-      id: asst_VC7inEwBBi0mdz02HeJojGb1
-      # to edit: https://platform.openai.com/assistants/asst_VC7inEwBBi0mdz02HeJojGb1
-  Evaluator:
+  Joker:
     inputs:
-      - "goal"
-      - "plan"
-      - "outcomes"
-    output: "feedback"
-    task: "Evaluate"
-    has_user_interaction: false
+      - Feedback
+    output: Joke
     assistant:
-      id: asst_TbhTXb8yN4uEBUSMETQvn3Fa
-      # to edit: https://platform.openai.com/assistants/asst_TbhTXb8yN4uEBUSMETQvn3Fa
-  Fixer:
+      name: Joker
+      instruction: |
+        You are a comedy genius. You tell a joke.
+        Your recceive ffeedback on your last joke; this is your input.
+        You learn from your feedback, and improve your jokes.
+    new_thread: false
+  Critique:
     inputs:
-      - "goal"
-      - "plan"
-      - "outcomes"
-      - "feedback"
-    output: "reflection"
-    task: "Fix and reflect"
+      - Joke
+    output: Feedback
     assistant:
-      id: asst_DGaMd7sDXPMcXuRaA2f6K42X
-      # to edit: https://platform.openai.com/assistants/asst_DGaMd7sDXPMcXuRaA2f6K42X
-      functions:
-        - web_search_qa
+      name: Critique
+      instruction: |
+        You are a comedy critic. You critique the joke.
+        Your recceive a joke; this is your input.
+    new_thread: false

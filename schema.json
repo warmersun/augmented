@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "assistant": {
+      "type": "object",
+      "oneOf": [
+        {
+          "properties": {
+            "id": { "type": "string" }
+          },
+          "required": ["id"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "name": { "type": "string" },
+            "instruction": { "type": "string" },
+            "functions": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "model": {
+              "type": "string",
+              "default": "gpt-4"
+            }
+          },
+          "required": ["name", "instruction"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "planner": {
+      "type": "object",
+      "properties": {
+        "assistant": { "$ref": "#/definitions/assistant" }
+      },
+      "required": ["assistant"]
+    },
+    "workers": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "inputs": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "output": { "type": "string" },
+          "task": { "type": "string" },
+          "has_user_interaction": {
+            "type": "boolean",
+            "default": true
+          },
+          "new_thread": {
+            "type": "boolean",
+            "default": true
+          },
+          "assistant": { "$ref": "#/definitions/assistant" }
+        },
+        "required": ["inputs", "output", "assistant"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["planner", "workers"]
+}

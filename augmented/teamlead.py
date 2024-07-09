@@ -3,6 +3,7 @@ import os
 from typing import Awaitable, Callable, Optional, Type
 
 import yaml
+from jsonschema import SchemaError, ValidationError, validate
 from openai import AsyncAssistantEventHandler, AsyncOpenAI
 from openai.types.beta.assistant import Assistant
 
@@ -15,11 +16,27 @@ class TeamLead:
   def _load_config(cls, filepath: str) -> dict:
     with open(filepath, 'r') as file:
       return yaml.safe_load(file)
+
+  @classmethod
+  def load_schema(cls, filepath: str) -> dict:
+    with open(filepath, 'r') as file:
+      return json.load(file)
+
+  @classmethod
+  def validate_config(cls, config: dict, schema: dict) -> None:
+    try:
+      validate(instance=config, schema=schema)
+    except ValidationError as e:
+        raise AssertionError(f"YAML file is invalid. Error: {e.message}\nSchema Path: {e.schema_path}\nInstance Path: {e.path}") from e
+    except SchemaError as e:
+        raise AssertionError(f"Schema is invalid. Error: {e.message}") from e
       
   def __init__(self, ask_user_func: Callable[[str], Awaitable[str]]):
     self.documents = {}
     self._workers = {}
     self.config = self._load_config('config.yaml')
+    schema = self.load_schema('schema.json')
+    self.validate_config(self.config, schema)
     self.function_definitions = self._load_config('function_definitions.yaml')
     self.next_worker_ndx = 0
     self.ask_user_func =  ask_user_func
@@ -30,6 +47,7 @@ class TeamLead:
     self._planner = None
     self.planner_thread = None
     self._current_worker_name = None
+    self._ids_of_assistants_created = []
     
   async def _get_assistant(self, assistant_config: dict) -> Assistant:
     # now we can construct the worker
@@ -56,6 +74,7 @@ class TeamLead:
         model=assistant_config.get('model','gpt-4o'),
         tools = tool_functions
       )
+      self._ids_of_assistants_created.append(assistant.id)
     return assistant
 
   async def get_worker(self, worker_name: str, message_event_handler_class: Type[AsyncAssistantEventHandler], output_event_handler_class: Type[AsyncAssistantEventHandler]) -> Optional[Worker]:
@@ -112,7 +131,7 @@ class TeamLead:
       self._planner = Planner(assistant, self.planner_thread, self.config, message_event_handler_class)
     return self._planner
     
-    
-
- 
-  
+  async def delete_any_assistant_created(self) -> None:
+    # delete any assistants that were created by this teamlead
+    for assistant_id in self._ids_of_assistants_created:
+      await self.async_client.beta.assistants.delete(assistant_id)

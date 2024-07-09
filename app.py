@@ -271,7 +271,13 @@ async def on_stop():
     current_team_member = cl.user_session.get("current_team_member")
     await current_team_member.cancel_run() if current_team_member else None
 
-
+@cl.on_chat_end
+async def end():
+    # call delete any assistant created by the teamlead
+    teamlead = cl.user_session.get("teamlead")
+    assert teamlead is not None, "teamlead should be set"
+    await teamlead.delete_any_assistant_created()
+    
 @cl.on_message
 async def main(message: cl.Message):
     # the user has just submitted a message...
