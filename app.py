@@ -102,11 +102,8 @@ class WorkerMessageEventHandler(AsyncAssistantEventHandler):
 
 
 async def ask_user_for_input(input_name: str) -> str:
-    worker = cl.user_session.get("worker")
-    assert worker is not None, "Worker not found in session."
-    assert worker.assistant is not None, "Worker assistant not found in session."
     input_ask = await cl.AskUserMessage(
-        author=worker.assistant.name,
+        author="teamlead",
         content=f"Please provide the input {input_name}!", timeout=60).send()
     input = input_ask.get(
         'output', 'No input provided') if input_ask else 'No input provided'
