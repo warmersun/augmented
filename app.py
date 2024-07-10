@@ -5,7 +5,7 @@ from typing import Optional
 import chainlit as cl
 from openai import AsyncAssistantEventHandler, AsyncOpenAI
 from openai.types.beta import AssistantStreamEvent
-from openai.types.beta.threads import Text, TextDelta
+from openai.types.beta.threads import Message, Text, TextDelta, annotation
 from openai.types.beta.threads.runs import ToolCall
 from typing_extensions import override
 
@@ -52,15 +52,35 @@ class WorkerMessageEventHandler(AsyncAssistantEventHandler):
         assert self.current_message is not None, "current_message should be set before on_text_delta"
         await self.current_message.stream_token(delta.value or "")
 
-    @override
-    async def on_text_done(self, text: Text) -> None:
-        assert self.current_message is not None, "current_message should be set before on_text_done"
-        # display a Finish button
-        finish_actions = cl.user_session.get("finish_actions")
-        if finish_actions:
-            self.current_message.actions = finish_actions
+#    @override
+#    async def on_text_done(self, text: Text) -> None:
+#        assert self.current_message is not None, "current_message should be set before on_text_done"
+#        # display a Finish button
+#        finish_actions = cl.user_session.get("finish_actions")
+#        if finish_actions:
+#            self.current_message.actions = finish_actions
+#
+#        await self.current_message.update()
 
-        await self.current_message.update()
+    @override
+    async def on_message_done(self, message: Message) -> None:
+        assert len(message.content) ==1, "Message should have exactly one content"
+        if message.content[0].type == "text":
+            message_content = message.content[0].text
+            annotations = message_content.annotations
+            citations = []
+            for index, annotation in enumerate(annotations):
+                message_content.value = message_content.value.replace(annotation.text, f" [{index}]")
+                file_citation = getattr(annotation, "file_citation", None)
+                if file_citation:
+                    cited_file = await self.async_client.files.retrieve(file_citation.file_id)
+                    citations.append(f"[{index}] {cited_file.filename}[{annotation.start_index}:{annotation.end_index}]")
+            assert self.current_message is not None, "current_message should be set before on_message_done"
+            self.current_message.content = f"{message_content.value}" + "\n---\n" + "\n".join(citations)
+            finish_actions = cl.user_session.get("finish_actions")
+            if finish_actions:
+                self.current_message.actions = finish_actions
+            await self.current_message.update()
 
     @override
     async def on_tool_call_done(self, tool_call: ToolCall) -> None:
