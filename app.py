@@ -275,6 +275,11 @@ class PlannerMessageEventHandler(AsyncAssistantEventHandler):
     async def submit_tool_outputs(self, tool_outputs, run_id):
         teamlead = cl.user_session.get("teamlead")
         assert teamlead is not None, "teamlead should be set"
+        # Debug logging to trace the issue
+        for output in tool_outputs:
+            print(f"Submitting Tool Call ID: {output['tool_call_id']}, Output Type: {type(output['output'])}, Output: {output['output']}")
+            assert isinstance(output['output'], str), f"Expected string but got {type(output['output'])} in {output}"
+            
         # Use the submit_tool_outputs_stream helper
         async with self.async_client.beta.threads.runs.submit_tool_outputs_stream(
             thread_id=teamlead.planner_thread.id,
@@ -455,7 +460,6 @@ async def show_task_list() -> None:
     if teamlead is None:
         return
     task_list = cl.TaskList()
-    task_list.status = "Running..."
     tasks = {}
     for worker_name, worker_config in teamlead.config['workers'].items():
         if worker_config.get("task") is not None:
@@ -482,6 +486,7 @@ async def task_running(task_desc: str) -> None:
         return
     task = tasks[task_desc]
     task.status = cl.TaskStatus.RUNNING
+    task_list.status = "Running..."
     await task_list.update()
 
 
@@ -494,6 +499,7 @@ async def task_done(task_desc: str) -> None:
         return
     task = tasks[task_desc]
     task.status = cl.TaskStatus.DONE
+    task_list.status = "Ready"
     await task_list.update()
 
 
