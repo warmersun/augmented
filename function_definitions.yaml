@@ -28,6 +28,26 @@ get_document: |
       },
       "required": ["document_name"]
     }
+  }
+
+set_document: |
+  {
+    "name": "set_document",
+    "description": "Set the full text of a document. Documents are in JSON format an contain a human readable text in Mardown format in the `markdown` field.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "document_name": {
+          "type": "string",
+          "description": "The name of the document to be set. If the document does not exist, it will be created. If it exists then it will be overwritten."
+        },
+        "document_json": {
+          "type": "string",
+          "description": "The JSON representation of the document to be set. The document must be in JSON format and contain a human readable text in Mardown format in the `markdown` field."
+        }
+      },
+      "required": ["document_name", "document_json"]
+    }
   }  
 
 list_all_procuded_documents: |

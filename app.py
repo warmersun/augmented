@@ -5,12 +5,17 @@ from typing import Optional
 import chainlit as cl
 from openai import AsyncAssistantEventHandler, AsyncOpenAI
 from openai.types.beta import AssistantStreamEvent
-from openai.types.beta.threads import Message, Text, TextDelta, annotation
+from openai.types.beta.threads import Message, Text, TextDelta
 from openai.types.beta.threads.runs import ToolCall
 from typing_extensions import override
 
 from augmented import TeamLead
-from function_tools import get_document, list_all_produced_documents, web_search_qa
+from function_tools import (
+    get_document,
+    list_all_produced_documents,
+    set_document,
+    web_search_qa,
+)
 
 # event handler for next user message
 
@@ -76,7 +81,7 @@ class WorkerMessageEventHandler(AsyncAssistantEventHandler):
                     cited_file = await self.async_client.files.retrieve(file_citation.file_id)
                     citations.append(f"[{index}] {cited_file.filename}[{annotation.start_index}:{annotation.end_index}]")
             assert self.current_message is not None, "current_message should be set before on_message_done"
-            self.current_message.content = f"{message_content.value}" + "\n---\n" + "\n".join(citations)
+            self.current_message.content = f"{message_content.value}" + "\n\n---\n\n" + "\n".join(citations)
             finish_actions = cl.user_session.get("finish_actions")
             if finish_actions:
                 self.current_message.actions = finish_actions
@@ -207,10 +212,14 @@ class PlannerMessageEventHandler(AsyncAssistantEventHandler):
             if tool.function.name == "get_document":
                 arguments = json.loads(tool.function.arguments)
                 tool_outputs.append({
-                    "tool_call_id":
-                    tool.id,
-                    "output":
-                    get_document(arguments['document_name'])
+                    "tool_call_id": tool.id,
+                    "output": get_document(arguments['document_name'])
+                })
+            elif tool.function.name == "set_document":
+                arguments = json.loads(tool.function.arguments)
+                tool_outputs.append({
+                    "tool_call_id": tool.id,
+                    "output": set_document(arguments['document_name'], arguments['document_json'])
                 })
             elif tool.function.name == "list_all_procuded_documents":
                 # arguments = json.loads(tool.function.arguments) -- doesn't take any arguments

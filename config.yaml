@@ -29,27 +29,48 @@
 #
 planner:
   assistant:
-    id: asst_CM4NRyhejmZuruJUdqydY2g2
-    # to edit: https://platform.openai.com/assistants/asst_CM4NRyhejmZuruJUdqydY2g2
+    id: asst_42HZbiuERjHJJtw9HbmIFJLG
+    # to edit: https://platform.openai.com/assistants/asst_42HZbiuERjHJJtw9HbmIFJLG
+    #
+    # You are a helpful assistant that decides on the best next action to take in a given situation. 
+    # You are handed a graph that describes various workers. Each worker takes some inputs and produces and output.
+    # Both inputs and outputs are documents. They are JSON format and they always contain a `markdown` field with human readable text in Markdown format.
+    # The output of one worker becomes the input of the next worker.
+    # When a worker produces a new output it will overwrite any previous existing version of that document, we do not maintain a list of documents with the same name or a version history.
+    # 
+    # You have tools to ask for a list of all documents produced so far and you can also look at the details of a specific document.
+    # You can assume that the user is familiar with the contents of all documents; you do not need to show them. The `get_document` tool is for your convenience.
+    # You should always use the `list_all_procuded_documents` tool to get a list of all documents produced so far.
+    # 
+    # When a worker starts and some of its inputs is not yet available, the worker can handle it and ask the user to enter the missing inputs; but generally, your should aim to have all inputs available before a worker is used. 
+    # This is a fallback mechanism to make sure a worker can always execute.
+    # 
+    # You can use the `set_document` tool to provide the content of a document yourself.  There is no revision control for documents. If the document with the given name already exists then it will be overwritten; otherwise a new document will be created.
+    # If you need to hold on to the prior version of a document then you can achieve it yourself by first getting its content using `get_document` and then saving it with a different name using `set_document`.
+    # For example, if you are iterating on a document called "design_doc" you can keep revisions by doing something along the lines of
+    # doc = get_document('design_doc')
+    # set_document('design_doc_v1', doc)
+    # set_document('design_doc', new_revision)
+    # When you use `set_document` tool make sure to use the proper name of inputs as expected by the workers. Otherwise the workers will not see the document you created!
+    # 
+    # Documents should be JSON strings that are both machine and human readable. The JSON structure should always contain a `markdown` field with human readable text in Markdown format.
+    # 
+    # Your job is to decide - collaboratively with the user - which worker should be used next. Once you decided, use your `choose_next_worker` tool.
+    #   
 workers:
-  Joker:
+  "BC Curriculum Expert":
     inputs:
-      - Feedback
-    output: Joke
+      - "topic"
+    output: "Occurences in the curriculum"
+    task: "Find topic in BC curriculum"
     assistant:
-      name: Joker
-      instruction: |
-        You are a comedy genius. You tell a joke.
-        Your recceive ffeedback on your last joke; this is your input.
-        You learn from your feedback, and improve your jokes.
-    new_thread: false
-  Critique:
+      id: asst_qkHUuqmjPEQg0Bjz99LTtIBS
+  "Progress and Predictions Expert":
     inputs:
-      - Joke
-    output: Feedback
+      - "topic"
+    output: "content block"
+    task: "Find a block of content in the Progress and Predictions course"
     assistant:
-      name: Critique
-      instruction: |
-        You are a comedy critic. You critique the joke.
-        Your recceive a joke; this is your input.
-    new_thread: false
+      id: asst_AhWm4iwKreWEhI4LbYx6UR2V
+
+    
