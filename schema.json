@@ -63,6 +63,12 @@
         "required": ["inputs", "output", "assistant"],
         "additionalProperties": false
       }
+    },
+    "documents": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
     }
   },
   "required": ["planner", "workers"]

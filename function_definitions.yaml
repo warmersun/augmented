@@ -33,7 +33,7 @@ get_document: |
 set_document: |
   {
     "name": "set_document",
-    "description": "Set the full text of a document. Documents are in JSON format an contain a human readable text in Mardown format in the `markdown` field.",
+    "description": "Set the full text of a document. Documents are in JSON format an contain a human readable text in Mardown format in the `markdown` field. The function returns what workers use this document as input and whether a new document has been created or an existing one has been overwritten.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -46,9 +46,28 @@ set_document: |
           "description": "The JSON representation of the document to be set. The document must be in JSON format and contain a human readable text in Mardown format in the `markdown` field."
         }
       },
-      "required": ["document_name", "document_json"]
+      "required": [
+        "document_name",
+        "document_json"
+      ]
     }
-  }  
+  }
+
+display_document: |
+  {
+    "name": "display_document",
+    "description": "Display the full text of a document in a user-friendly way.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "document_json": {
+          "type": "string",
+          "description": "The JSON representation of the document to be displayed. The document must be in JSON format and contain a human readable text in Mardown format in the `markdown` field."
+        }
+      },
+      "required": ["document_json"]
+    }
+  }
 
 list_all_procuded_documents: |
   {

@@ -11,6 +11,7 @@ from typing_extensions import override
 
 from augmented import TeamLead
 from function_tools import (
+    display_document,
     get_document,
     list_all_produced_documents,
     set_document,
@@ -217,9 +218,21 @@ class PlannerMessageEventHandler(AsyncAssistantEventHandler):
                 })
             elif tool.function.name == "set_document":
                 arguments = json.loads(tool.function.arguments)
+                # make sure arguments['document_json'] is a string
+                if not isinstance(arguments['document_json'], str):
+                    arguments['document_json'] = json.dumps(arguments['document_json'], indent=4)
                 tool_outputs.append({
                     "tool_call_id": tool.id,
                     "output": set_document(arguments['document_name'], arguments['document_json'])
+                })
+            elif tool.function.name == "display_document":
+                arguments = json.loads(tool.function.arguments)
+                # make sure arhuments['document_json'] is a string
+                if not isinstance(arguments['document_json'], str):
+                    arguments['document_json'] = json.dumps(arguments['document_json'], indent=4)
+                tool_outputs.append({
+                    "tool_call_id": tool.id,
+                    "output": await display_document(arguments['document_json'])
                 })
             elif tool.function.name == "list_all_procuded_documents":
                 # arguments = json.loads(tool.function.arguments) -- doesn't take any arguments
@@ -276,9 +289,8 @@ class PlannerMessageEventHandler(AsyncAssistantEventHandler):
         teamlead = cl.user_session.get("teamlead")
         assert teamlead is not None, "teamlead should be set"
         # Debug logging to trace the issue
-        for output in tool_outputs:
-            print(f"Submitting Tool Call ID: {output['tool_call_id']}, Output Type: {type(output['output'])}, Output: {output['output']}")
-            assert isinstance(output['output'], str), f"Expected string but got {type(output['output'])} in {output}"
+        for tool_output in tool_outputs:
+            assert isinstance(tool_output['output'], str), f"Expected string but got {type(tool_output['output'])} in {tool_output}"
             
         # Use the submit_tool_outputs_stream helper
         async with self.async_client.beta.threads.runs.submit_tool_outputs_stream(

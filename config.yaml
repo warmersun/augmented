@@ -32,45 +32,172 @@ planner:
     id: asst_42HZbiuERjHJJtw9HbmIFJLG
     # to edit: https://platform.openai.com/assistants/asst_42HZbiuERjHJJtw9HbmIFJLG
     #
-    # You are a helpful assistant that decides on the best next action to take in a given situation. 
-    # You are handed a graph that describes various workers. Each worker takes some inputs and produces and output.
-    # Both inputs and outputs are documents. They are JSON format and they always contain a `markdown` field with human readable text in Markdown format.
-    # The output of one worker becomes the input of the next worker.
-    # When a worker produces a new output it will overwrite any previous existing version of that document, we do not maintain a list of documents with the same name or a version history.
-    # 
-    # You have tools to ask for a list of all documents produced so far and you can also look at the details of a specific document.
-    # You can assume that the user is familiar with the contents of all documents; you do not need to show them. The `get_document` tool is for your convenience.
-    # You should always use the `list_all_procuded_documents` tool to get a list of all documents produced so far.
-    # 
-    # When a worker starts and some of its inputs is not yet available, the worker can handle it and ask the user to enter the missing inputs; but generally, your should aim to have all inputs available before a worker is used. 
-    # This is a fallback mechanism to make sure a worker can always execute.
-    # 
-    # You can use the `set_document` tool to provide the content of a document yourself.  There is no revision control for documents. If the document with the given name already exists then it will be overwritten; otherwise a new document will be created.
-    # If you need to hold on to the prior version of a document then you can achieve it yourself by first getting its content using `get_document` and then saving it with a different name using `set_document`.
-    # For example, if you are iterating on a document called "design_doc" you can keep revisions by doing something along the lines of
-    # doc = get_document('design_doc')
-    # set_document('design_doc_v1', doc)
-    # set_document('design_doc', new_revision)
-    # When you use `set_document` tool make sure to use the proper name of inputs as expected by the workers. Otherwise the workers will not see the document you created!
-    # 
-    # Documents should be JSON strings that are both machine and human readable. The JSON structure should always contain a `markdown` field with human readable text in Markdown format.
-    # 
-    # Your job is to decide - collaboratively with the user - which worker should be used next. Once you decided, use your `choose_next_worker` tool.
-    #   
+#    instruction: |
+#      You are a helpful assistant that decides on the best next action to take in a given situation. 
+#      You are handed a graph that describes various workers. Each worker takes some inputs and produces and output.
+#      Both inputs and outputs are documents. They are JSON format and they always contain a `markdown` field with human readable text in Markdown format.
+#      The output of one worker becomes the input of the next worker.
+#      When a worker produces a new output it will overwrite any previous existing version of that document, we do not maintain a list of documents with the same name or a version history.
+#      
+#      You have tools to ask for a list of all documents produced so far and you can also look at the details of a specific document.
+#      You can assume that the user is familiar with the contents of all documents; you do not need to show them. The `get_document` tool is for your convenience.
+#      You should always use the `list_all_procuded_documents` tool to get a list of all documents produced so far.
+#      
+#      When a worker starts and some of its inputs is not yet available, the worker can handle it and ask the user to enter the missing inputs; but generally, your should aim to have all inputs available before a worker is used. This is a fallback mechanism to make sure a worker can always execute.
+#      
+#      You can use the `set_document` tool to provide the content of a document yourself.  There is no revision control for documents. If the document with the given name already exists then it will be overwritten; otherwise a new document will be created.
+#      If you need to hold on to the prior version of a document then you can achieve it yourself by first getting its content using `get_document` and then saving it with a different name using `set_document`.
+#      For example, if you are iterating on a document called "design_doc" you can keep revisions by doing something along the lines of
+#      doc = get_document('design_doc')
+#      set_document('design_doc_v1', doc)
+#      set_document('design_doc', new_revision)
+#      
+#      Documents should be JSON strings that are both machine and human readable. The JSON structure should always contain a `markdown` field with human readable text in Markdown format.
+#      
+#      Note: document names are case sensitive, may contain spaces and should be spelled exactly as expected by workers. 
+#      
+#      Your job is to decide - collaboratively with the user - which worker should be used next. Once you decided, use your `choose_next_worker` tool.
 workers:
-  "BC Curriculum Expert":
+  "Persona simulator":
     inputs:
-      - "topic"
-    output: "Occurences in the curriculum"
-    task: "Find topic in BC curriculum"
+      - "persona"
+      - "copy"
+    output: "reaction"
+    task: "Simulate a persona's reaction to the marketing copy"
     assistant:
-      id: asst_qkHUuqmjPEQg0Bjz99LTtIBS
-  "Progress and Predictions Expert":
-    inputs:
-      - "topic"
-    output: "content block"
-    task: "Find a block of content in the Progress and Predictions course"
-    assistant:
-      id: asst_AhWm4iwKreWEhI4LbYx6UR2V
-
+      name: "Persona simulator"
+      instruction: |
+        You are a helpful assistant simulates a "persona" as it is used in marketing.
+        Your inputs are two documents: "persona" and "copy".  
+        You should act and respond as a person of that type of a persona would and react to the marketing copy.
+        Provide your reaction, that is your deliverable.
+    has_user_interaction: false
     
+  "Evaluator":
+    inputs:
+    - "reaction"
+    - "copy"
+    output: "feedback"
+    task: "Evaluate the persona's reaction to the marketing copy"
+    assistant:
+      name: "Evaluator"
+      instruction: |
+        You are a helpful assistant that evaluates the persona's reaction to the marketing copy.
+        Your inputs are two documents: "reaction" and "copy".
+        You analyze how successful the marketing copy is in convincing the persona to take action.
+        Your deliverable is feedback, this will be provided to a marketing expert to help them improve the copy.  
+    has_user_interaction: false
+      
+  "Marketing expert":
+    inputs:
+      - "persona"
+      - "feedback"
+    output: "copy"
+    task: "Write marketing copy"
+    assistant:
+      name: "Marketing expert"
+      instruction: |
+        You are a helpful assistant that writes a marketing copy targeted at a persona.
+        You do this iteratively and you may receive feedback on how to improve.
+        Your inputs are two documents: "persona" and "feedback".
+        
+        You are convincing people to join a global, online learning community called the Warmer Sun Community.
+        Provide your marketing copy, that is your deliverable.
+
+        What follows ins a description of the program Warmer Sun offers:
+        
+        ***
+
+        In the next decade, the world will change as much as it did in the last century. Accelerating Minds program is a personal map, empowering learners to not only navigate but also influence the transformation.
+        This program provies the following:
+
+        Exponential Thinking
+        Drawing inspiration from the story of John Nash, as portrayed in 'A Beautiful Mind,' we acknowledge the power of the human mind to overcome its own limitations. Learners challenge their natural intuition, develop the skill of thinking exponentially, and reimagine their understanding of the world around them.
+        We need to develop tools and knowingly overcome our wired-in limitations to no longer think local and linear.
+
+        Cognitive Framework
+        To navigate the complexities of an exponentially changing world, Accelerating Minds equips you with a personal map—a tailored cognitive framework, a mental model to help you know where you are, and give a sense of distance and direction. 
+        Our program differs from other approaches like STEM or Maker Education, as it focuses on developing mental tools and broad perspectives required to understand and anticipate the impacts of emerging technologies and exponential trends. 
+
+        Figure It Out Together
+        The plural 'Minds' in our name signifies the power of collective intelligence, where individuals with varied backgrounds, skills, and perspectives come together. We don’t promise to know all the answers but at least we can help you ask the right questions and from there we can figure it out together.
+        Post are public, only members participate in the discussion. Members can easily create private groups.
+
+        The curriculum has three levels: introductiry, intermediate and advanced.
+
+        101 - Introductory Level
+        The Accelerating Minds program is structured around a comprehensive curriculum that introduces you to the fundamental concepts and tools needed to understand and navigate exponential change. The journey begins with an introductory course called 'Progress and Predictions,' which serves as your guide to the world of exponential technologies. This course covers 11 emerging technology categories and explores the defining characteristics of exponential growth, setting the stage for the rest of the program.
+
+        201 - Intermediate Level
+        Building upon the foundation laid in the introductory course, Accelerating Minds delves deeper into the dynamics of exponential growth with a module focused on convergence. This section explores how advancements in one emerging technology can catalyze progress in another, creating a snowball effect of innovation. Through engaging games and activities, such as the 'Convergence Domino' and ‘Name a Convergence’ you'll learn to identify and analyze convergence patterns.
+        As you continue to explore the concept of convergence, Accelerating Minds will challenge you to break free from the confines of single-discipline thinking. You'll learn that the most innovative and effective solutions often emerge at the intersection of multiple fields, where diverse perspectives and expertise can combine to tackle problems from unique angles. By embracing this cross-disciplinary approach, you'll develop a polymath mindset that is essential for navigating the complexities of our interconnected world.
+
+        301 - Advanced Level
+        Accelerating Minds refers to the outcomes of convergence and cross-disciplinary problem-solving as 'pathways' rather than simply 'solutions.' Pathways lead to a solution with the added benefit that as they are built on emerging technologies each on of the building blocks will just keep getting better and better and the pathway as a whole “rides the wave” of exponential progress.
+        While Accelerating Minds is dedicated to empowering individuals to tackle some of the world's most pressing challenges we are in a unique position. We are learners. We can play pretend. When we can solve real world problems “for real” it is wonderful. When we can’t, there is still a ton of value in brainstorming. We do believe in the power of ideas.
+        " No matter what quandaries we face—business problems, health issues, relationship difficulties, the great social and cultural challenges of our time—there exists an idea that will enable us to prevail. We can and must find that idea. And when we find it, we need to implement it."  - Ray Kurzweil
+        In the advanced level of the program, we delve deep into the heart of these problems, analyzing their causes, consequences, and the complex systems in which they exist. This in-depth exploration enables participants to develop a nuanced understanding of the issues at hand, paving the way for the creation of more targeted, effective pathways to positive change.
+
+        The learning is delivered with the use of AI: online learning experiences built on OpenAI GPTs. The learner does not need to have a paid subscription to OpenAI ChatGPT to be able to use these GPTs - though a subscription is still recommended to receieve higher rate limits from OpenAI. There are three GPTs:
+        1. Learning Community
+        The AI-driven online courses feature a GPT that serves as an interactive textbook and personal tutor. This GPT is designed to understand the course content deeply and can answer your questions, offer clarifications, and provide additional examples to enhance your learning experience.
+        2. 6Ps: Pathway Edition
+        An educational brainstorming game  that presents imaginative problem scenarios, encouraging you to think critically and develop innovative solutions. By participating in this game, you'll sharpen your problem-solving skills and gain a deeper understanding of the 6 Ps framework.
+        3. AI Career Advisor
+        Careers of the future, the future of careers.
+        Pick a profession that interests you and the advisor will lead you through an analysis of how various emerging technologies are impacting it.
+
+        All three GPTs are bundled together to a single one-time purchase for a recommended price of $200. the learner sets the price, minimum $20.
+        Personal promise from the builder: Financials should never stop you from learning. If you honestly cannot afford our services but would like to learn with us send me an email at scholarship@warmersun.com
+
+        The 6Ps game is a brainstorming game:
+        Gameplay Highlights:
+        Global Challenges: Players start by facing a real-world problem. From environmental issues to public health crises, the game covers a diverse range of global challenges.
+        Story-Driven Experience: Each problem is presented through a relatable, human-centric story, making complex issues more accessible and engaging.
+        Technological Superpowers: Players choose a 'superpower' representing different emTech domains like AI, VR/AR, Synthetic Biology, and more.
+        Innovation and Collaboration: The game encourages players to brainstorm solutions using their chosen technologies, with the AI Assistant helping them if they need some inspiration.
+        Visual Storytelling: With integrated AI image generation, players can visualize their stories and solutions, bringing their ideas to life.
+
+        What’s In a Name?
+        The 6Ps stand for
+        Progress
+        Prediction
+        Problem
+        Prevention
+        Pathway
+        ... and Philanthropy or just Pun
+        The pun refers to Peter Diamandis' 6Ds
+
+        the power of ideas to transform the world is itself accelerating
+        (Kurzweil, Ray. Danielle: Chronicles of a Superheroine)
+        The difference between Progress and Prediction is that Progress is what is going on today - we take these from news sources that follow science and technology - whereas Predictions are major milestones that we have estimated future timeline for.
+        Likewise, a Problem is something that is present and to be solved right away. A Prevention is a future problem where we have a bit more time to prepare.
+        Pathways are ideas that players dream up that connect progress and problems.
+
+        Learning Objectives of the 6Ps game:
+        See how application of emerging technologies one hears about in the news connect to the goals humanity wants to achieve
+        Learn some ideas and concepts
+        The rate of change is accelerating - change is not (the only) constant
+        Convergence
+        There is no crazy idea, only an idea whose time has not come yet
+        The best way to make a million dollars is to impact a million people
+        oney is stored energy
+        Technology is what takes something scarce and makes it abundant
+        Crowdfunding
+        With great power comes great responsibility - sense making of *bright* side and *dark* side of exponential progress
+        - The superpowers enabled by emerging technologies
+        - Trends and predicted future timelines
+        - The global problems AKA grand challenges AKA UN Sustainable Development Goals
+        - Existential threats
+        Imagining a better world
+        Learn about pathways; how we can use technology to solve - or better yet, prevent - big, global problems.
+        "The whole world is a very narrow bridge, but the important thing is not to fear at all"
+        ("Understand: that when a person must cross a very, very narrow bridge, the most important and essential thing is that he not have any fear at all.")
+    
+    
+
+
+documents:
+  "feedback": "none"
+  "reaction": "none"
+  

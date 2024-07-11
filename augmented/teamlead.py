@@ -35,6 +35,9 @@ class TeamLead:
     self.documents = {}
     self._workers = {}
     self.config = self._load_config('config.yaml')
+    # read document from the configuration
+    for document_name, document_content in self.config['documents'].items():
+      self.documents[document_name] = document_content
     schema = self.load_schema('schema.json')
     self.validate_config(self.config, schema)
     self.function_definitions = self._load_config('function_definitions.yaml')
