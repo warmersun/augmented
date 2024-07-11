@@ -19,7 +19,10 @@ async def display_document(document_json: str) -> str:
     ]
     msg.elements = elements
   except json.JSONDecodeError as e:
-    msg.content = "Something went wrong. Error: " + str(e)
+    elements = [
+      cl.Text(name="document_json", content=f"```\n{document_json}\n```\n", display="inline"),
+    ]
+    msg.elements = elements
   finally:
     await msg.update()
   return "Displayed the document."

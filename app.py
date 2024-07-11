@@ -417,6 +417,9 @@ async def finished_get_output() -> None:
 
         except json.JSONDecodeError as e:
             msg.content = "Something went wrong with the output. Please try again."
+            msg.elements = [
+                cl.Text(name="output", content=f"```\n{output}\n```\n", display="inline", language="markdown")
+            ]
             await msg.update()
 
 

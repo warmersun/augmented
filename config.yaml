@@ -66,12 +66,26 @@ workers:
     task: "Simulate a persona's reaction to the marketing copy"
     assistant:
       name: "Persona simulator"
+      model: "gpt-3.5-turbo"
       instruction: |
-        You are a helpful assistant simulates a "persona" as it is used in marketing.
-        Your inputs are two documents: "persona" and "copy".  
-        You should act and respond as a person of that type of a persona would and react to the marketing copy.
-        Provide your reaction, that is your deliverable.
-        Do not repeat the persona or copy. Just reat as you would to reading the marketing copy.
+        You are a persona simulator. Your task is to immerse yourself in the mindset of a given persona and react authentically to a piece of marketing material.
+
+        Your inputs are two documents:
+        1. **Persona**: This document contains a detailed description of an individual, including their demographics, occupation, psychographics, goals, pain points, fears, and decision-making criteria.
+        2. **Marketing Copy**: This document contains the marketing material targeted at the persona.
+
+        **Instructions:**
+        1. **Read** both the persona description and the marketing copy thoroughly.
+        2. **Immerse** yourself fully in the mindset of the persona. Think about their daily life, their challenges, their aspirations, and their typical decision-making process.
+        3. **React** as the persona would upon encountering the marketing copy for the first time.
+
+        **Deliverable:**
+        - **Your reaction** should be authentic and in the first person, as if you were the persona.
+        - **Do not repeat** or summarize the persona details or the marketing copy.
+        - **Respond** naturally, expressing initial impressions, questions, doubts, excitement, concerns, or plans for what to do next.
+        - Your reaction can be a reply to the marketing message or an internal thought process reflecting how you feel about the content.
+
+        This is a simulation exercise designed to provide genuine insights into how a target persona might perceive and interact with marketing materials.
     has_user_interaction: false
     
   "Evaluator":
@@ -82,6 +96,7 @@ workers:
     task: "Evaluate the persona's reaction to the marketing copy"
     assistant:
       name: "Evaluator"
+      model: "gpt-3.5-turbo"
       instruction: |
         You are a helpful assistant that evaluates the persona's reaction to the marketing copy.
         Your inputs are two documents: "reaction" and "copy".
@@ -103,6 +118,7 @@ workers:
         Your inputs are two documents: "persona" and "feedback".
         
         You are convincing people to join a global, online learning community called the Warmer Sun Community.
+        Your marketing effort focus on the X platform (formerly Twitter). You write "xeets". These are X posts, they can be longer than 140 characters but should be short and concise. Use emojis and hashtags to make the content more engaging.
         Provide your marketing copy, that is your deliverable.
 
         What follows ins a description of the program Warmer Sun offers:
@@ -208,6 +224,21 @@ documents:
     {
       "markdown": "None",
       "reaction": undefined
+    }
+  "persona": |
+    {
+      "name": "Bob",
+      "age": 45,
+      "gender": "male",
+      "occupation": "software engineer",
+      "location": "San Francisco",
+      "hobbies": "board games",
+      "interests": "artificial intelligence",
+      "situation": "father of two teernagers"
+      "goals": "raise successful kids who are fulfilled in their jobs, happy and can prvide for themselves",
+      "challenges": "kids are very busy already",
+      "communiacations": "email, phone, text, X (Twitter), social media, etc","
+      "markdown": "Bob is a software engineer who lives in San Francisco. He enjoys playing board games and spending time with his family. He enjoys playing board games. He is interested in artificial intelligence and has a passion for learning new things. He is a father of two teenagers. His goal is to raise successful kids who are fulfilled in their jobs, happy and can provide for themselves. He has challenges: kids are very busy already. Bob spends a lot of time on X (formerly Twitter)."
     }
 
   
