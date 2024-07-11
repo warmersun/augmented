@@ -198,6 +198,15 @@ workers:
 
 
 documents:
-  "feedback": "none"
-  "reaction": "none"
+  "feedback": |
+    {
+      "markdown": "None",
+      "feedback": undefined
+    }
+  "reaction": |
+    {
+      "markdown": "None",
+      "reaction": undefined
+    }
+
   
