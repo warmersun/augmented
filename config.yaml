@@ -71,6 +71,7 @@ workers:
         Your inputs are two documents: "persona" and "copy".  
         You should act and respond as a person of that type of a persona would and react to the marketing copy.
         Provide your reaction, that is your deliverable.
+        Do not repeat the persona or copy. Just reat as you would to reading the marketing copy.
     has_user_interaction: false
     
   "Evaluator":

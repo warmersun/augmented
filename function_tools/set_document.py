@@ -3,10 +3,11 @@ from typing import Optional
 import chainlit as cl
 
 from augmented import TeamLead
+from function_tools import display_document
 
 
 @cl.step(type="tool", name="Set document")
-def set_document(document_name: str, document_json: str) -> str:
+async def set_document(document_name: str, document_json: str) -> str:
   teamlead: Optional[TeamLead] = cl.user_session.get("teamlead")
   assert teamlead is not None, "teamlead should be set"
   # iterate on teamlead.config['workers'] and find which work has this document_name as one of its inputs
@@ -20,4 +21,5 @@ def set_document(document_name: str, document_json: str) -> str:
   else:
     d_retval = f"Document {document_name} created. Workers using this document as input: {worker_list}"
   teamlead.documents[document_name] = document_json
+  await display_document(document_json)
   return d_retval

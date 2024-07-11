@@ -223,7 +223,7 @@ class PlannerMessageEventHandler(AsyncAssistantEventHandler):
                     arguments['document_json'] = json.dumps(arguments['document_json'], indent=4)
                 tool_outputs.append({
                     "tool_call_id": tool.id,
-                    "output": set_document(arguments['document_name'], arguments['document_json'])
+                    "output": await set_document(arguments['document_name'], arguments['document_json'])
                 })
             elif tool.function.name == "display_document":
                 arguments = json.loads(tool.function.arguments)
