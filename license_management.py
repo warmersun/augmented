@@ -1,8 +1,8 @@
 import os
 from typing import Optional
 
-import aiohttp
 import asyncpg
+import httpx
 
 
 async def get_license_key(user_identifier: str) -> Optional[str]:
@@ -16,16 +16,17 @@ async def get_license_key(user_identifier: str) -> Optional[str]:
   finally:
     await conn.close()
 
-async def verify_license(license_key: str, increment_usage = True) -> tuple[bool, int]:
+async def verify_license(license_key: str, increment_usage=True) -> tuple[bool, int]:
     data = {
         'product_id': os.environ['GUMROAD_PRODUCT_ID'],
         'license_key': license_key,
         'increment_uses_count': increment_usage
     }
-    async with aiohttp.ClientSession() as session, session.post('https://api.gumroad.com/v2/licenses/verify', data=data) as response:
-        if response.status != 200:
+    async with httpx.AsyncClient() as client:
+        response = await client.post('https://api.gumroad.com/v2/licenses/verify', data=data)
+        if response.status_code != 200:
             return False, 0  # or any indication of failure and zero uses
-        license_info = await response.json()
+        license_info = response.json()
         success = license_info.get('success', False)
         uses = license_info.get('uses', 0)
         return success and uses < int(os.environ['GUMROAD_MAX_USES']), uses

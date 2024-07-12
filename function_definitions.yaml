@@ -1,6 +1,6 @@
-web_search_qa: |
+web_search_qa_perplexity: |
   {
-    "name": "web_search_qa",
+    "name": "web_search_qa_perplexity",
     "description": "Calls an always up-to-date online LLM to perform a web search and answer the question based on what the LLM knows and recent information from the web.",
     "parameters": {
       "type": "object",
@@ -11,6 +11,28 @@ web_search_qa: |
         }
       },
       "required": ["question"]
+    }
+  }
+
+web_search_brave: |
+  {
+    "name": "web_search_brave",
+    "description": "Search the Web using Brave Search API.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "q": {
+          "type": "string",
+          "description": "The search query. Maximum of 400 characters and 50 words in the query. You can also optimize your search query by using  search operators. -: Returns web pages not containing the specified term neither in the title nor the body of the page. Example: to search web pages containing the keyword 'office' while avoiding results with the term 'Microsoft', type 'office -microsoft'. \"\": Returns web pages containing only exact matches to your query. Example: to find web pages about Harry Potter only containing the keywords 'order of the phoenix' in that exact order, type 'harry potter \"order of the phoenix\"'. You can use logical operators AND, OR and NOT in combination with search operators."
+        },
+        "freshness": {
+          "type": "string",
+          "description": "The freshness of the search results. Can be 'pd' (past day), 'pw' (past week), 'pm' (past month), 'py' (past year), 'YYYY-MM-DDtoYYYY-MM-DD' (custom date range)."
+        }
+      },
+      "required": [
+        "q"
+      ]
     }
   }
 

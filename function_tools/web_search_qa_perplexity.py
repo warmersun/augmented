@@ -5,8 +5,8 @@ from openai import AsyncOpenAI
 
 # refer to https://docs.perplexity.ai/docs/pricing for Pricing
 
-@cl.step(type="tool", name="Search for Up-to-date Answer Using Perplexity")
-async def web_search_qa(question: str) -> str:
+@cl.step(type="tool", name="Ask Question for Up-to-Date Answer Using Perplexity")
+async def web_search_qa_perplexity(question: str) -> str:
   current_step = cl.context.current_step
   if current_step:
     current_step.input = question

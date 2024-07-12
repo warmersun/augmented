@@ -16,7 +16,8 @@ from function_tools import (
     get_document,
     list_all_produced_documents,
     set_document,
-    web_search_qa,
+    web_search_brave,
+    web_search_qa_perplexity,
 )
 from license_management import (
     check_and_store_license_key,
@@ -110,13 +111,23 @@ class WorkerMessageEventHandler(AsyncAssistantEventHandler):
     async def handle_requires_action(self, data, run_id):
         tool_outputs = []
         for tool in data.required_action.submit_tool_outputs.tool_calls:
-            if tool.function.name == "web_search_qa":
+            if tool.function.name == "web_search_qa_perplexity":
                 arguments = json.loads(tool.function.arguments)
                 tool_outputs.append({
                     "tool_call_id":
                     tool.id,
                     "output":
-                    await web_search_qa(arguments['question'])
+                    await web_search_qa_perplexity(arguments['question'])
+                })
+            elif tool.function.name == "web_search_brave":
+                args = json.loads(tool.function.arguments)
+                if "freshness" in args:
+                    output = await web_search_brave(args["q"], freshness=args["freshness"])
+                else:
+                    output = await web_search_brave(args["q"])
+                tool_outputs.append({
+                    "tool_call_id": tool.id,
+                    "output": json.dumps(output)
                 })
         # Submit all tool_outputs at the same time
         await self.submit_tool_outputs(tool_outputs, run_id)

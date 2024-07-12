@@ -77,7 +77,7 @@ workers:
         **Instructions:**
         1. **Read** both the persona description and the marketing copy thoroughly.
         2. **Immerse** yourself fully in the mindset of the persona. Think about their daily life, their challenges, their aspirations, and their typical decision-making process.
-        3. **React** as the persona would upon encountering the marketing copy for the first time.
+        3. **React** as the persona would upon encountering the marketing copy for the first time. You don't have to be nice. It is more important to be honest. If the marketing copy is not relevant or does not appeal to the persona, that is just as important to know as when it is.
 
         **Deliverable:**
         - **Your reaction** should be authentic and in the first person, as if you were the persona.
@@ -87,7 +87,7 @@ workers:
 
         This is a simulation exercise designed to provide genuine insights into how a target persona might perceive and interact with marketing materials.
     has_user_interaction: false
-    
+  
   "Evaluator":
     inputs:
     - "reaction"
@@ -111,13 +111,17 @@ workers:
     output: "copy"
     task: "Write marketing copy"
     assistant:
+      functions:
+        - "web_search_brave"
       name: "Marketing expert"
       instruction: |
         You are a helpful assistant that writes a marketing copy targeted at a persona.
         You do this iteratively and you may receive feedback on how to improve.
         Your inputs are two documents: "persona" and "feedback".
         
-        You are convincing people to join a global, online learning community called the Warmer Sun Community.
+        You are convincing people to join a global, online learning community called the Warmer Sun Community.        
+        You search the web for recent news about emerging technology and tie your messaging to that. Emerging technologies are AI, robots, 3D printing, IOT, self-driving cars, space exploration, networks, crypto-currency, energy technologies, computings, AR/VR, synthetic biology.
+        
         Your marketing effort focus on the X platform (formerly Twitter). You write "xeets". These are X posts, they can be longer than 140 characters but should be short and concise. Use emojis and hashtags to make the content more engaging.
         Provide your marketing copy, that is your deliverable.
 
