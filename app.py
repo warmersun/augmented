@@ -25,8 +25,10 @@ from license_management import (
     verify_license,
 )
 
-# event handler for next user message
+with open('LICENSE_KEY_HOW_TO.md', 'r') as file:
+    LICENSE_KEY_HOW_TO = file.read()
 
+# event handler for next user message
 
 class WorkerMessageEventHandler(AsyncAssistantEventHandler):
 
@@ -328,7 +330,7 @@ async def start():
     assert user is not None, "User not found in session."
     license_key = await get_license_key(user.identifier)
     while not license_key:
-        res = await AskUserMessage(content="Please provide your license key.", timeout=300).send()
+        res = await AskUserMessage(content=LICENSE_KEY_HOW_TO, timeout=300).send()
         license_key = res.get('output') if res else None
         if license_key:
             is_valid = await check_and_store_license_key(license_key, user.identifier)
