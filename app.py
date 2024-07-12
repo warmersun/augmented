@@ -3,6 +3,7 @@ import os
 from typing import Optional
 
 import chainlit as cl
+from chainlit.message import AskUserMessage
 from openai import AsyncAssistantEventHandler, AsyncOpenAI
 from openai.types.beta import AssistantStreamEvent
 from openai.types.beta.threads import Message, Text, TextDelta
@@ -16,6 +17,11 @@ from function_tools import (
     list_all_produced_documents,
     set_document,
     web_search_qa,
+)
+from license_management import (
+    check_and_store_license_key,
+    get_license_key,
+    verify_license,
 )
 
 # event handler for next user message
@@ -307,6 +313,18 @@ class PlannerMessageEventHandler(AsyncAssistantEventHandler):
 
 @cl.on_chat_start
 async def start():
+    user = cl.user_session.get("user")
+    assert user is not None, "User not found in session."
+    license_key = await get_license_key(user.identifier)
+    while not license_key:
+        res = await AskUserMessage(content="Please provide your license key.", timeout=300).send()
+        license_key = res.get('output') if res else None
+        if license_key:
+            is_valid = await check_and_store_license_key(license_key, user.identifier)
+            if not is_valid:
+                license_key = None
+    cl.user_session.set("license_key", license_key)
+    
     teamlead = TeamLead(ask_user_for_input)
     cl.user_session.set("teamlead", teamlead)
     # display the task list
@@ -364,6 +382,18 @@ async def save_output_and_continue_planner() -> None:
 
 
 async def finished_get_output() -> None:
+    # check license and increment counter
+    license_key = cl.user_session.get("license_key")
+    assert license_key is not None, "license_key should be set"
+    good, uses = await verify_license(license_key)
+    if not good:
+        await cl.Message(
+            author="System", 
+            content="Your license key is no longer valid. Please contact your team lead to get a new one."
+        ).send()
+        return
+    await show_license_usage(uses, int(os.environ['GUMROAD_MAX_USES']))
+        
     # get the worker from the user session
     worker = cl.user_session.get("worker")
     if worker is not None:
@@ -415,7 +445,7 @@ async def finished_get_output() -> None:
                 # the output is good to go
                 await save_output_and_continue_planner()
 
-        except json.JSONDecodeError as e:
+        except json.JSONDecodeError:
             msg.content = "Something went wrong with the output. Please try again."
             msg.elements = [
                 cl.Text(name="output", content=f"```\n{output}\n```\n", display="inline", language="markdown")
@@ -501,7 +531,6 @@ async def task_running(task_desc: str) -> None:
         return
     task = tasks[task_desc]
     task.status = cl.TaskStatus.RUNNING
-    task_list.status = "Running..."
     await task_list.update()
 
 
@@ -514,10 +543,25 @@ async def task_done(task_desc: str) -> None:
         return
     task = tasks[task_desc]
     task.status = cl.TaskStatus.DONE
-    task_list.status = "Ready"
     await task_list.update()
 
+async def show_license_usage(uses: int, max_uses: int) -> None:
+    task_list = cl.user_session.get("task_list")
+    if task_list is None:
+        return
+    task_list.status = f"License usage: {uses}/{max_uses}"
+    await task_list.update()
+
+@cl.oauth_callback
+def oauth_callback(
+  provider_id: str,
+  token: str,
+  raw_user_data: dict[str, str],
+  default_user: cl.User,
+) -> Optional[cl.User]:
+  return default_user
 
 if __name__ == "__main__":
     from chainlit.cli import run_chainlit
     run_chainlit(__file__)
+    
